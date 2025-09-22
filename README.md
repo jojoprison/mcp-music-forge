@@ -1,1 +1,1 @@
-# mcp-comics
+mcp plugin / tool, soundcloud / yandex music / youtube/ spotify downloader, youtube downloader, audio converter, audio tag editor
