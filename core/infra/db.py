@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlmodel import SQLModel
-from typing import Iterator
 
 from core.settings import get_settings
 
@@ -18,7 +19,11 @@ def get_engine():
         settings = get_settings()
         _engine = create_engine(
             settings.database_url,
-            connect_args={"check_same_thread": False} if settings.database_url.startswith("sqlite") else {},
+            connect_args=(
+                {"check_same_thread": False}
+                if settings.database_url.startswith("sqlite")
+                else {}
+            ),
             pool_pre_ping=True,
         )
     return _engine
@@ -28,15 +33,18 @@ def get_session_maker() -> sessionmaker[Session]:
     global _SessionLocal
     if _SessionLocal is None:
         _SessionLocal = sessionmaker(
-            autocommit=False, autoflush=False, bind=get_engine(), expire_on_commit=False
+            autocommit=False,
+            autoflush=False,
+            bind=get_engine(),
+            expire_on_commit=False,
         )
     return _SessionLocal
 
 
 @contextmanager
 def session_scope() -> Iterator[Session]:
-    SessionLocal = get_session_maker()
-    session = SessionLocal()
+    session_local = get_session_maker()
+    session = session_local()
     try:
         yield session
         session.commit()

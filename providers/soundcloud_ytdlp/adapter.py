@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import re
-import yt_dlp as ytdlp
-from anyio import to_thread
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
+
+import yt_dlp as ytdlp
+from anyio import to_thread
 
 from core.ports.provider_port import ProbeResult, ProviderPort
 from core.settings import get_settings
@@ -29,7 +29,9 @@ class SoundCloudYtDlpProvider(ProviderPort):
     def can_handle(self, url: str) -> bool:
         return any(h in url for h in _SOUNDCLOUD_HOSTS)
 
-    async def _extract_info(self, url: str, download: bool, outtmpl: Optional[str] = None) -> dict[str, Any]:
+    async def _extract_info(
+        self, url: str, download: bool, outtmpl: str | None = None
+    ) -> dict[str, Any]:
         settings = get_settings()
         ydl_opts: dict[str, Any] = {
             "quiet": True,
@@ -44,21 +46,36 @@ class SoundCloudYtDlpProvider(ProviderPort):
 
         def _run() -> dict[str, Any]:
             with ytdlp.YoutubeDL(ydl_opts) as ydl:
-                return ydl.extract_info(url, download=download)  # type: ignore[no-any-return]
+                return ydl.extract_info(url, download=download)
 
         return await to_thread.run_sync(_run)
 
     async def probe(self, url: str) -> ProbeResult:
         info = await self._extract_info(url, download=False)
         # Only allow if uploader marked track as downloadable to respect ToU
-        downloadable = bool(info.get("downloadable") or info.get("download_url"))
-        normalized_id = str(info.get("id")) if info.get("id") is not None else None
+        downloadable = bool(
+            info.get("downloadable") or info.get("download_url")
+        )
+        normalized_id = (
+            str(info.get("id")) if info.get("id") is not None else None
+        )
         title = info.get("title")
         artist = info.get("uploader") or info.get("artist")
-        duration = int(info.get("duration")) if info.get("duration") else None
-        artwork_url = info.get("thumbnail") or info.get("thumbnails", [{}])[-1].get("url") if info.get(
-            "thumbnails") else None
-        reason = None if downloadable else "Track is not marked as downloadable by uploader per ToU"
+        _dur = info.get("duration")
+        if isinstance(_dur, int | float | str):
+            duration = int(_dur)
+        else:
+            duration = None
+        artwork_url = (
+            info.get("thumbnail") or info.get("thumbnails", [{}])[-1].get("url")
+            if info.get("thumbnails")
+            else None
+        )
+        reason = (
+            None
+            if downloadable
+            else "Track is not marked as downloadable by uploader per ToU"
+        )
         return ProbeResult(
             provider=self.name,
             can_download=downloadable,
@@ -70,19 +87,30 @@ class SoundCloudYtDlpProvider(ProviderPort):
             reason_if_denied=reason,
         )
 
-    async def download(self, url: str, dest_dir: str) -> tuple[str, ProbeResult]:
+    async def download(
+        self, url: str, dest_dir: str
+    ) -> tuple[str, ProbeResult]:
         Path(dest_dir).mkdir(parents=True, exist_ok=True)
         # Enforce can_download prior to downloading to respect ToU
         probe = await self.probe(url)
         if not probe.can_download:
-            raise PermissionError(probe.reason_if_denied or "Track not allowed for download")
+            raise PermissionError(
+                probe.reason_if_denied or "Track not allowed for download"
+            )
 
         outtmpl = str(Path(dest_dir) / "%(title)s.%(ext)s")
         info = await self._extract_info(url, download=True, outtmpl=outtmpl)
         # Construct filepath like yt-dlp would have produced
         title = info.get("title") or info.get("id")
-        ext = info.get("ext") or (
-            info.get("requested_downloads", [{}])[0].get("ext") if info.get("requested_downloads") else None) or "mp3"
+        ext = (
+            info.get("ext")
+            or (
+                info.get("requested_downloads", [{}])[0].get("ext")
+                if info.get("requested_downloads")
+                else None
+            )
+            or "mp3"
+        )
         filename = f"{title}.{ext}"
         filepath = str(Path(dest_dir) / filename)
 

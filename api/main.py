@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqladmin import Admin, ModelView
@@ -11,12 +12,19 @@ from core.infra.db import create_db_and_tables, get_engine
 from core.logging import configure_logging
 from core.settings import get_settings
 from mcp_music_forge.mcp_app import mcp
-from mcp_music_forge.tools.enqueue_download import EnqueueOptions, EnqueueResult, enqueue_download
-from mcp_music_forge.tools.get_job_status import GetJobStatusResult, get_job_status
+from mcp_music_forge.tools.enqueue_download import (
+    EnqueueOptions,
+    EnqueueResult,
+    enqueue_download,
+)
+from mcp_music_forge.tools.get_job_status import (
+    GetJobStatusResult,
+    get_job_status,
+)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # type: ignore[no-redef]
+async def lifespan(app: FastAPI):
     settings = get_settings()
     configure_logging(logging.INFO)
     create_db_and_tables()
@@ -24,19 +32,31 @@ async def lifespan(app: FastAPI):  # type: ignore[no-redef]
     if settings.otel_endpoint:
         try:
             from opentelemetry import trace
-            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+                OTLPSpanExporter,
+            )
+            from opentelemetry.instrumentation.fastapi import (
+                FastAPIInstrumentor,
+            )
             from opentelemetry.sdk.resources import SERVICE_NAME, Resource
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import BatchSpanProcessor
-            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-            provider = TracerProvider(resource=Resource.create({SERVICE_NAME: settings.otel_service_name}))
-            provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=settings.otel_endpoint)))
+            provider = TracerProvider(
+                resource=Resource.create(
+                    {SERVICE_NAME: settings.otel_service_name}
+                )
+            )
+            provider.add_span_processor(
+                BatchSpanProcessor(
+                    OTLPSpanExporter(endpoint=settings.otel_endpoint)
+                )
+            )
             trace.set_tracer_provider(provider)
             FastAPIInstrumentor.instrument_app(app)
-        except Exception:
-            # Observability is optional; continue without failing
-            pass
+        except Exception as e:
+            # Observability is optional; continue without failing, but log why
+            logging.getLogger(__name__).warning("OTEL setup skipped: %s", e)
     yield
 
 
@@ -55,8 +75,15 @@ app.add_middleware(
 app.mount("/mcp", mcp.streamable_http_app())
 
 
-class JobAdmin(ModelView, model=Job):
-    column_list = [Job.id, Job.provider, Job.status, Job.title, Job.artist, Job.created_at]
+class JobAdmin(ModelView, model=Job):  # type: ignore[call-arg]
+    column_list = [
+        "id",
+        "provider",
+        "status",
+        "title",
+        "artist",
+        "created_at",
+    ]
     name_plural = "Jobs"
 
 
@@ -70,7 +97,9 @@ async def health() -> dict[str, str]:
 
 
 @app.post("/download", response_model=EnqueueResult)
-async def api_enqueue(url: str, options: EnqueueOptions | None = None) -> EnqueueResult:
+async def api_enqueue(
+    url: str, options: EnqueueOptions | None = None
+) -> EnqueueResult:
     try:
         return await enqueue_download(url, options)
     except Exception as e:  # noqa: BLE001

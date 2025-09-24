@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import shlex
 import subprocess
-from anyio import to_thread
 from pathlib import Path
-from typing import Sequence
+
+from anyio import to_thread
 
 from core.settings import get_settings
 
@@ -32,14 +31,23 @@ def _args_for(format: str, quality: str) -> list[str]:
     return ["-c:a", "copy"]
 
 
-async def transcode(input_path: Path, output_dir: Path, target_format: str, quality: str) -> Path:
+async def transcode(
+    input_path: Path, output_dir: Path, target_format: str, quality: str
+) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     out = output_dir / (input_path.stem + f".{target_format}")
     ffmpeg = get_settings().ffmpeg_bin
-    args: list[str] = [ffmpeg, "-y", "-i", str(input_path), *(_args_for(target_format, quality)), str(out)]
+    args: list[str] = [
+        ffmpeg,
+        "-y",
+        "-i",
+        str(input_path),
+        *(_args_for(target_format, quality)),
+        str(out),
+    ]
 
     def _run() -> None:
-        proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.run(args, capture_output=True)
         if proc.returncode != 0:
             msg = proc.stderr.decode("utf-8", errors="ignore")
             raise RuntimeError(f"ffmpeg failed: {msg}")

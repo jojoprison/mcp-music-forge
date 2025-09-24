@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import structlog
+import logging
 import sys
 from typing import Any
 
-import logging
+import structlog
 
 
 def configure_logging(level: int = logging.INFO) -> None:
@@ -15,10 +15,12 @@ def configure_logging(level: int = logging.INFO) -> None:
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso", utc=True),
-            structlog.processors.StackInfoRenderer()
-            if level <= logging.DEBUG
-            else structlog.processors.CallsiteParameterAdder(
-                [structlog.processors.CallsiteParameter.FUNC_NAME]
+            (
+                structlog.processors.StackInfoRenderer()
+                if level <= logging.DEBUG
+                else structlog.processors.CallsiteParameterAdder(
+                    [structlog.processors.CallsiteParameter.FUNC_NAME]
+                )
             ),
             structlog.processors.format_exc_info,
             structlog.processors.JSONRenderer(),

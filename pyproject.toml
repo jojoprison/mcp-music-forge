@@ -5,7 +5,7 @@ description = "MCP server + workers for audio download/convert/tag (SoundCloud f
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 authors = [{ name = "mcp-music-forge" }]
-license = { file = "LICENSE" }
+license = "MIT"
 keywords = ["mcp", "soundcloud", "yt-dlp", "audio", "fastapi", "redis", "arq"]
 
 # project dependencies
@@ -51,8 +51,8 @@ dev = [
     "ruff>=0.5",
     "black>=24.8",
     "pre-commit>=3.7",
-    "types-redis>=4.6.0.20250106",
-    "types-requests>=2.32.0.20240712",
+    "types-redis>=4.6.0",
+    "types-requests>=2.31.0.0",
     "httpx[cli]>=0.27",
 ]
 
@@ -62,9 +62,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.ruff]
 line-length = 80
-select = ["E", "F", "W", "B", "I", "UP", "N", "S", "C90"]
-ignore = ["S101", "S106", "S603", "S607"]
 # Use Ruff for lint only; Black handles formatting
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I", "UP", "N", "S", "C90"]
+ignore = ["S101", "S106", "S603", "S607", "S104"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["mcp_music_forge", "core", "providers", "storage", "transcoder", "workers", "api"]
@@ -73,6 +75,18 @@ known-first-party = ["mcp_music_forge", "core", "providers", "storage", "transco
 line-length = 80
 target-version = ["py312"]
 preview = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "mcp_music_forge",
+    "core",
+    "providers",
+    "storage",
+    "transcoder",
+    "workers",
+    "api",
+]
 
 [tool.mypy]
 python_version = "3.12"
@@ -118,4 +132,3 @@ package = true
 
 [project.scripts]
 mcp-music-forge-mcp = "mcp_music_forge.mcp_app:main"
-

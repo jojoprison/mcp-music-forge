@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 from core.ports.storage_port import StoragePort
 from core.settings import get_settings
@@ -22,7 +21,7 @@ class LocalStorage(StoragePort):
         d.mkdir(parents=True, exist_ok=True)
         return d
 
-    def list_files(self, job_id: str) -> List[Path]:
+    def list_files(self, job_id: str) -> list[Path]:
         d = self.job_dir(job_id)
         if not d.exists():
             return []

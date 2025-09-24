@@ -3,8 +3,9 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+
 from pydantic import BaseModel, Field
-from typing import Optional
+from sqlalchemy import select
 
 from core.domain.job import Job, JobStatus
 from core.infra.db import session_scope
@@ -34,7 +35,9 @@ def _fingerprint(url: str, opts: EnqueueOptions) -> str:
 
 
 @mcp.tool()
-async def enqueue_download(url: str, options: Optional[EnqueueOptions] = None) -> EnqueueResult:
+async def enqueue_download(
+    url: str, options: EnqueueOptions | None = None
+) -> EnqueueResult:
     """Create or dedupe a job and enqueue it for processing."""
     options = options or EnqueueOptions()
     provider = detect_provider(url)
@@ -44,8 +47,10 @@ async def enqueue_download(url: str, options: Optional[EnqueueOptions] = None) -
     fp = _fingerprint(url, options)
 
     with session_scope() as s:
-        # Our primary key is id; fingerprint is indexed unique. Query by fingerprint.
-        existing = s.query(Job).filter(Job.fingerprint == fp).first()  # type: ignore[attr-defined]
+        # Our primary key is id; fingerprint is indexed unique.
+        # Query by fingerprint.
+        res = s.execute(select(Job).where(Job.fingerprint == fp))
+        existing = res.scalar_one_or_none()
         if existing:
             job_id = existing.id
             status = JobStatus(existing.status)

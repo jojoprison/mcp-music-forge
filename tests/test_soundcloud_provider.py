@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import asyncio
-import pytest
 from typing import Any
+
+import pytest
 
 from providers.soundcloud_ytdlp.adapter import SoundCloudYtDlpProvider
 
@@ -11,7 +11,9 @@ from providers.soundcloud_ytdlp.adapter import SoundCloudYtDlpProvider
 async def test_probe_downloadable(monkeypatch: pytest.MonkeyPatch) -> None:
     provider = SoundCloudYtDlpProvider()
 
-    async def fake_extract(url: str, download: bool, outtmpl: str | None = None) -> dict[str, Any]:
+    async def fake_extract(
+        url: str, download: bool, outtmpl: str | None = None
+    ) -> dict[str, Any]:
         return {
             "id": 123,
             "title": "Test Track",
@@ -34,7 +36,9 @@ async def test_probe_downloadable(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_probe_not_downloadable(monkeypatch: pytest.MonkeyPatch) -> None:
     provider = SoundCloudYtDlpProvider()
 
-    async def fake_extract(url: str, download: bool, outtmpl: str | None = None) -> dict[str, Any]:
+    async def fake_extract(
+        url: str, download: bool, outtmpl: str | None = None
+    ) -> dict[str, Any]:
         return {
             "id": 321,
             "title": "ND Track",

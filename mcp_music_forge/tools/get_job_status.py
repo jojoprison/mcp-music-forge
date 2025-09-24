@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+
 from pydantic import BaseModel, Field
-from typing import Optional
 
 from core.domain.job import ArtifactDTO, ArtifactKind, Job, JobStatus
 from core.infra.db import session_scope
@@ -14,10 +14,10 @@ from storage.local_fs import LocalStorage
 class GetJobStatusResult(BaseModel):
     id: str
     status: JobStatus
-    error: Optional[str] = None
-    title: Optional[str] = None
-    artist: Optional[str] = None
-    duration: Optional[int] = None
+    error: str | None = None
+    title: str | None = None
+    artist: str | None = None
+    duration: int | None = None
     artifacts: list[ArtifactDTO] = Field(default_factory=list)
 
 
@@ -25,7 +25,9 @@ def _gather_artifacts(job_id: str, storage: StoragePort) -> list[ArtifactDTO]:
     artifacts: list[ArtifactDTO] = []
     for p in storage.list_files(job_id):
         # Simple heuristic: files in 'final/' are final, others original
-        kind = ArtifactKind.final if "/final/" in str(p) else ArtifactKind.original
+        kind = (
+            ArtifactKind.final if "/final/" in str(p) else ArtifactKind.original
+        )
         # Compute sha256
         h = hashlib.sha256()
         try:
@@ -55,7 +57,7 @@ def _gather_artifacts(job_id: str, storage: StoragePort) -> list[ArtifactDTO]:
 async def get_job_status(job_id: str) -> GetJobStatusResult:
     """Return job status and artifact list."""
     with session_scope() as s:
-        job: Optional[Job] = s.get(Job, job_id)
+        job: Job | None = s.get(Job, job_id)
         if not job:
             raise ValueError("Job not found")
         storage = LocalStorage()

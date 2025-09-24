@@ -2,24 +2,32 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
 
 
 class AppSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     app_env: str = Field(default="dev", alias="APP_ENV")
     tz: str = Field(default="UTC", alias="TZ")
 
-    redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
+    redis_url: str = Field(
+        default="redis://localhost:6379/0", alias="REDIS_URL"
+    )
 
     storage_dir: Path = Field(default=Path("data"), alias="STORAGE_DIR")
 
-    database_url: str = Field(default="sqlite:///data/db.sqlite3", alias="DATABASE_URL")
+    database_url: str = Field(
+        default="sqlite:///data/db.sqlite3", alias="DATABASE_URL"
+    )
 
-    soundcloud_cookie_file: Optional[Path] = Field(default=None, alias="SOUNDCLOUD_COOKIE_FILE")
+    soundcloud_cookie_file: Path | None = Field(
+        default=None, alias="SOUNDCLOUD_COOKIE_FILE"
+    )
 
     ffmpeg_bin: str = Field(default="ffmpeg", alias="FFMPEG_BIN")
 
@@ -27,8 +35,12 @@ class AppSettings(BaseSettings):
     api_port: int = Field(default=8000, alias="API_PORT")
 
     # OTEL
-    otel_endpoint: Optional[str] = Field(default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT")
-    otel_service_name: str = Field(default="mcp-music-forge", alias="OTEL_SERVICE_NAME")
+    otel_endpoint: str | None = Field(
+        default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT"
+    )
+    otel_service_name: str = Field(
+        default="mcp-music-forge", alias="OTEL_SERVICE_NAME"
+    )
 
 
 class RuntimeContext(BaseModel):

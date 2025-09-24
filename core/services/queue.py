@@ -8,9 +8,9 @@ from core.settings import get_settings
 
 async def enqueue_download_job(job_id: str) -> None:
     settings = get_settings()
-    redis = await create_pool(RedisSettings.from_dsn(settings.redis_url))
-    try:
-        await redis.enqueue_job("process_download", job_id)  # workers.tasks.process_download
-    finally:
-        redis.close()
-        await redis.wait_closed()
+    async with await create_pool(
+        RedisSettings.from_dsn(settings.redis_url)
+    ) as redis:
+        await redis.enqueue_job(
+            "process_download", job_id
+        )  # workers.tasks.process_download

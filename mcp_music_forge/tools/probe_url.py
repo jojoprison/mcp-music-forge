@@ -19,7 +19,10 @@ class ProbeToolResult(BaseModel):
 
 @mcp.tool()
 async def probe_url(url: str) -> ProbeToolResult:
-    """Detect provider for URL and check if track is downloadable per provider rules."""
+    """
+    Detect provider for URL and check whether track is downloadable per
+    provider rules.
+    """
     provider = detect_provider(url)
     if not provider:
         return ProbeToolResult(
