@@ -37,7 +37,7 @@ class DownloadOptions(BaseModel):
     )
 
 
-class Job(SQLModel, table=True):  # type: ignore[call-arg]
+class Job(SQLModel, table=True):
     id: str = SQLField(primary_key=True, index=True)
     provider: str
     url: str

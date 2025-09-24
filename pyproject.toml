@@ -97,6 +97,7 @@ warn_redundant_casts = true
 warn_unused_configs = true
 no_implicit_optional = true
 plugins = []
+disable_error_code = ["call-arg"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

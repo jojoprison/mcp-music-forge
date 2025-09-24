@@ -5,7 +5,6 @@ import json
 import uuid
 
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 
 from core.domain.job import Job, JobStatus
 from core.infra.db import session_scope
@@ -49,8 +48,7 @@ async def enqueue_download(
     with session_scope() as s:
         # Our primary key is id; fingerprint is indexed unique.
         # Query by fingerprint.
-        res = s.execute(select(Job).where(Job.fingerprint == fp))
-        existing = res.scalar_one_or_none()
+        existing = s.query(Job).filter_by(fingerprint=fp).first()
         if existing:
             job_id = existing.id
             status = JobStatus(existing.status)
