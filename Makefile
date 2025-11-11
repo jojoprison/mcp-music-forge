@@ -12,19 +12,17 @@ ARQ=.venv/bin/arq
 
 # Runtime defaults
 HOST ?= 0.0.0.0
-PORT ?= 8033
 DATA_DIR ?= data
 REDIS_URL ?= redis://localhost:6379/0
 
-.PHONY: help venv venv-recreate install update freeze format lint lint-fix type test check precommit api mcp redis compose-up compose-down enqueue job status clean
+.PHONY: help venv venv-recreate install update freeze format lint lint-fix type test check precommit api mcp worker redis compose-up compose-down enqueue job status clean
 
-help:
+	help:
 	@echo "Targets:"
 	@echo "  venv           - create .venv via uv"
 	@echo "  install        - install deps (dev) with uv"
 	@echo "  update         - update deps (uv pip sync)"
 	@echo "  freeze         - export requirements.txt (lockless)"
-	@echo "  format         - run black"
 	@echo "  lint           - run ruff check"
 	@echo "  lint-fix       - run ruff --fix"
 	@echo "  type           - run mypy"
@@ -33,6 +31,7 @@ help:
 	@echo "  precommit      - pre-commit run -a"
 	@echo "  api            - run uvicorn api.main:app --reload"
 	@echo "  mcp            - run MCP stdio server"
+	@echo "  worker         - run ARQ worker"
 	@echo "  redis          - run local redis via docker"
 	@echo "  compose-up     - docker compose up"
 	@echo "  compose-down   - docker compose down"
@@ -84,7 +83,16 @@ api:
 	$(UVICORN) api.main:app --reload --host $(HOST) --port $(PORT)
 
 mcp:
+	STORAGE_DIR=$(DATA_DIR) \
+	DATABASE_URL=sqlite:///$(DATA_DIR)/db.sqlite3 \
+	REDIS_URL=$(REDIS_URL) \
 	$(PY) -m mcp_music_forge.mcp_app
+
+worker:
+	STORAGE_DIR=$(DATA_DIR) \
+	DATABASE_URL=sqlite:///$(DATA_DIR)/db.sqlite3 \
+	REDIS_URL=$(REDIS_URL) \
+	$(ARQ) workers.tasks.WorkerSettings -w 1
 
 redis:
 	docker run --rm -p 6379:6379 redis:7-alpine
