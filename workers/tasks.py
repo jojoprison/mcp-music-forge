@@ -31,7 +31,9 @@ async def process_download(ctx: Any, job_id: str) -> None:
                 j.status = JobStatus.failed.value
                 j.error = str(e)
                 s.add(j)
-        raise
+        # Do not re-raise to keep ARQ from trying to
+        # serialize complex exceptions
+        return None
 
 
 # Resolve Redis settings from env via our settings provider

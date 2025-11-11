@@ -41,8 +41,21 @@ class SoundCloudYtDlpProvider(ProviderPort):
             "outtmpl": outtmpl or "%(title)s.%(ext)s",
             "format": "bestaudio/best",
         }
-        if settings.soundcloud_cookie_file:
-            ydl_opts["cookiefile"] = str(settings.soundcloud_cookie_file)
+        # Use cookie file only if it points to a regular file (not directory)
+        cookie_path = settings.soundcloud_cookie_file
+        if cookie_path:
+            p = Path(cookie_path)
+            if p.is_file():
+                ydl_opts["cookiefile"] = str(p)
+        # If outtmpl provided, set base download dir explicitly
+        # to avoid cwd='.' issues
+        if outtmpl:
+            try:
+                base_dir = str(Path(outtmpl).parent)
+                if base_dir and base_dir != ".":
+                    ydl_opts["paths"] = {"home": base_dir}
+            except Exception:
+                print("lol")
 
         def _run() -> dict[str, Any]:
             with ytdlp.YoutubeDL(ydl_opts) as ydl:

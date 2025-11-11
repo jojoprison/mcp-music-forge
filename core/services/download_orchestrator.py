@@ -4,7 +4,12 @@ import logging
 from pathlib import Path
 
 import httpx
-from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
+from tenacity import (
+    AsyncRetrying,
+    retry_if_not_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 import transcoder.ffmpeg_cli as ffmpeg_cli
 from core.domain.job import DownloadOptions, Job, JobStatus
@@ -50,15 +55,20 @@ async def process_job(job_id: str) -> None:
         return
 
     # Download original with retries
-    async for attempt in AsyncRetrying(
-        wait=wait_exponential(multiplier=1, min=1, max=8),
-        stop=stop_after_attempt(3),
-    ):
-        with attempt:
-            original_dir = storage.ensure_subdir(job_id, "original")
-            original_path_str, probe = await provider.download(
-                url, str(original_dir)
-            )
+    try:
+        async for attempt in AsyncRetrying(
+            wait=wait_exponential(multiplier=1, min=1, max=8),
+            stop=stop_after_attempt(3),
+            retry=retry_if_not_exception_type(PermissionError),
+        ):
+            with attempt:
+                original_dir = storage.ensure_subdir(job_id, "original")
+                original_path_str, probe = await provider.download(
+                    url, str(original_dir)
+                )
+    except PermissionError as e:
+        _mark_failed(job_id, str(e))
+        return
 
     # Update metadata
     _update_job_metadata(job_id, probe)
