@@ -1,13 +1,12 @@
 # BUILD / RUN / DEPLOY
 
 Этот гайд покрывает сборку, запуск и развёртывание `mcp-music-forge`.
+Основной сценарий — Docker Compose. Локальный запуск (uv) оставлен как опция для разработки.
 
 ## Требования
 
-- Python 3.12
-- ffmpeg (локально: `brew install ffmpeg`)
-- Redis (локально: `brew install redis && redis-server` или через Docker Compose)
-- Опционально: Docker + Docker Compose
+- Docker + Docker Compose
+- (Опционально для локальной разработки) Python 3.12, uv
 
 ## Переменные окружения (.env)
 
@@ -21,7 +20,49 @@
 - `API_PORT=8033`
 - `SOUNDCLOUD_COOKIE_FILE=` (опционально, соблюдая ToU)
 
-## Локальная сборка и запуск (через uv)
+## Запуск через Docker Compose (рекомендуется)
+
+```bash
+cp .env.example .env
+
+# сборка образов и запуск стека
+make compose-build
+make compose-up
+
+# Доступ:
+# - API: http://localhost:8033
+# - Admin: http://localhost:8033/admin
+```
+
+В стеке поднимаются:
+
+- `redis` — брокер очереди
+- `api` — HTTP API + MCP HTTP
+- `worker` — ARQ воркер, обрабатывающий задания
+
+Проверка:
+
+```bash
+curl -s http://localhost:8033/health | jq
+# {"status": "ok"}
+
+# Поставить задачу (SoundCloud ссылка с разрешённым скачиванием по ToU)
+make enqueue URL="https://soundcloud.com/artist/track"
+
+# Проверить статус
+make status JOB=<job_id>
+```
+
+Полезные команды:
+
+```bash
+make compose-logs     # логи всех сервисов
+make compose-ps       # статус контейнеров
+make compose-restart  # рестарт сервисов
+make compose-down     # остановить и удалить
+```
+
+## Локальная сборка и запуск (через uv) — опционально
 
 ```bash
 # создать окружение
@@ -37,36 +78,22 @@ ruff check .
 mypy .
 pytest -q
 
-# запустить API
+# запустить API (локально)
 uvicorn api.main:app --reload
 # API: http://localhost:8033, Admin: http://localhost:8033/admin, MCP HTTP: /mcp
 
-# запустить MCP (stdio)
+# запустить MCP (stdio) локально
 python -m mcp_music_forge.mcp_app
-```
-
-## Запуск через Docker Compose
-
-```bash
-cp .env.example .env
-
-# сборка образов и запуск стека
-docker compose build
-docker compose up
-
-# Доступ:
-# - API: http://localhost:8033
-# - Admin: http://localhost:8033/admin
 ```
 
 ## Воркеры и очередь
 
 - Очередь: ARQ + Redis.
-- Воркер поднимается как отдельный сервис в `docker-compose.yml` или как отдельный процесс:
+- Воркер поднимается автоматически как сервис `worker` в `docker-compose.yml`.
+- Для локального запуска вне Docker (опционально):
 
 ```bash
-# локально, при активном .venv
-arq workers.tasks.WorkerSettings -w 1
+arq workers.tasks.WorkerSettings
 ```
 
 ## Примеры запросов

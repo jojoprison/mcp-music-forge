@@ -39,4 +39,4 @@ services:
       - ./data:/app/data
     depends_on:
       - redis
-    command: [ "arq", "workers.tasks.WorkerSettings", "-w", "1" ]
+    command: [ "arq", "workers.tasks.WorkerSettings" ]
