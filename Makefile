@@ -3,18 +3,17 @@
 UV=uv
 PY=.venv/bin/python
 
-.PHONY: help venv venv-recreate install compose-up compose-down compose-build compose-restart compose-logs compose-ps enqueue status clean
+.PHONY: help venv venv-recreate install upb down build logs ps enqueue status clean
 
 help:
 	@echo "Targets:"
 	@echo "  venv             - create .venv via uv (optional for dev)"
 	@echo "  install          - install deps (dev) with uv (optional for dev)"
-	@echo "  compose-build    - docker compose build"
-	@echo "  compose-up       - docker compose up"
-	@echo "  compose-down     - docker compose down -v"
-	@echo "  compose-restart  - docker compose restart"
-	@echo "  compose-logs     - docker compose logs -f"
-	@echo "  compose-ps       - docker compose ps"
+	@echo "  build    		  - docker compose build"
+	@echo "  upb      		  - docker compose build + up"
+	@echo "  down        	  - docker compose down -v"
+	@echo "  logs     		  - docker compose logs -f"
+	@echo "  ps       		  - docker compose ps"
 	@echo "  enqueue URL=..   - POST /download?url=.. (expects API on 8033)"
 	@echo "  status JOB=..    - GET /jobs/{id} (expects API on 8033)"
 
@@ -29,22 +28,19 @@ install:
 	@[ -d .venv ] || $(UV) venv --python 3.12
 	$(UV) pip install -e '.[dev]'
 
-compose-build:
+build:
 	docker compose build
 
-compose-up:
-	docker compose up
+upb:
+	docker compose up -d --build
 
-compose-down:
+down:
 	docker compose down -v
 
-compose-restart:
-	docker compose restart
-
-compose-logs:
+logs:
 	docker compose logs -f
 
-compose-ps:
+ps:
 	docker compose ps
 
 enqueue:
