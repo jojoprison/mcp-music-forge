@@ -12,6 +12,7 @@ ARQ=.venv/bin/arq
 
 # Runtime defaults
 HOST ?= 0.0.0.0
+PORT ?= 8033
 DATA_DIR ?= data
 REDIS_URL ?= redis://localhost:6379/0
 
@@ -92,7 +93,7 @@ worker:
 	STORAGE_DIR=$(DATA_DIR) \
 	DATABASE_URL=sqlite:///$(DATA_DIR)/db.sqlite3 \
 	REDIS_URL=$(REDIS_URL) \
-	$(ARQ) workers.tasks.WorkerSettings -w 1
+	$(ARQ) workers.tasks.WorkerSettings
 
 redis:
 	docker run --rm -p 6379:6379 redis:7-alpine
