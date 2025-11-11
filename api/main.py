@@ -57,7 +57,12 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             # Observability is optional; continue without failing, but log why
             logging.getLogger(__name__).warning("OTEL setup skipped: %s", e)
-    yield
+    # Ensure MCP StreamableHTTP SessionManager is running for mounted /mcp app
+    # This initializes the internal task group required to handle requests
+    # (avoids: RuntimeError "Task group is not initialized.
+    # Make sure to use run().")
+    async with mcp.session_manager.run():
+        yield
 
 
 app = FastAPI(title="MCP Music Forge", version="0.1.0", lifespan=lifespan)
@@ -67,11 +72,16 @@ app.add_middleware(
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=[
+        "mcp-protocol-version",
+        "mcp-session-id",
+        "authorization",
+        "content-type",
+    ],
+    expose_headers=["mcp-session-id"],
 )
 
 # Mount MCP Streamable HTTP under /mcp
-# NOTE: This allows HTTP transport for MCP clients that support it.
 app.mount("/mcp", mcp.streamable_http_app())
 
 

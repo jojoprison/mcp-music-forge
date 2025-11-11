@@ -25,7 +25,13 @@ async def lifespan(_: FastMCP) -> AsyncIterator[LifespanContext]:
     yield LifespanContext(settings=settings)
 
 
-mcp = FastMCP("mcp-music-forge", lifespan=lifespan)
+mcp = FastMCP(
+    "mcp-music-forge",
+    lifespan=lifespan,
+    # Important when mounting under /mcp in FastAPI to avoid double prefix
+    streamable_http_path="/",
+    stateless_http=True,
+)
 
 # Import side-effects: tool and resource registrations
 # isort: off
