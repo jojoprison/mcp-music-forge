@@ -28,11 +28,19 @@ class ProviderPort(abc.ABC):
 
     @abc.abstractmethod
     async def download(
-        self, url: str, dest_dir: str
+        self, url: str, dest_dir: str, *, respect_tou: bool = True
     ) -> tuple[str, ProbeResult]:
         """
         Download media into dest_dir and return (filepath, metadata).
         The filepath should point to an audio file (original) suitable for
         further processing.
+
+        Args:
+            url: media url
+            dest_dir: target directory for download
+            respect_tou: if True, download only when provider marks
+                            downloadable;
+                         if False, allow stream downloads (e.g., m3u8)
+                            where possible
         """
         ...

@@ -29,6 +29,11 @@ class AppSettings(BaseSettings):
         default=None, alias="SOUNDCLOUD_COOKIE_FILE"
     )
 
+    # If true, allow stream downloads even when provider marks not downloadable
+    allow_stream_downloads: bool = Field(
+        default=True, alias="ALLOW_STREAM_DOWNLOADS"
+    )
+
     ffmpeg_bin: str = Field(default="ffmpeg", alias="FFMPEG_BIN")
 
     api_host: str = Field(default="0.0.0.0", alias="API_HOST")

@@ -10,6 +10,7 @@ from core.domain.job import Job, JobStatus
 from core.infra.db import session_scope
 from core.services.provider_registry import detect_provider
 from core.services.queue import enqueue_download_job
+from core.settings import get_settings
 from mcp_music_forge.mcp_app import mcp
 
 
@@ -19,6 +20,9 @@ class EnqueueOptions(BaseModel):
     embed_cover: bool = Field(default=True)
     prefer_original: bool = Field(default=True)
     tags: dict[str, str] = Field(default_factory=dict)
+    # If None, derive from settings.ALLOW_STREAM_DOWNLOADS
+    # (False -> respect_tou=True)
+    respect_tou: bool | None = Field(default=None)
 
 
 class EnqueueResult(BaseModel):
@@ -39,6 +43,10 @@ async def enqueue_download(
 ) -> EnqueueResult:
     """Create or dedupe a job and enqueue it for processing."""
     options = options or EnqueueOptions()
+    # Resolve respect_tou default from settings if not provided
+    if options.respect_tou is None:
+        settings = get_settings()
+        options.respect_tou = not settings.allow_stream_downloads
     provider = detect_provider(url)
     if not provider:
         raise ValueError("No provider can handle this URL")

@@ -8,7 +8,7 @@ MYPY=.venv/bin/mypy
 PYTEST=.venv/bin/pytest
 PRECOMMIT=.venv/bin/pre-commit
 
-.PHONY: help venv venv-recreate install update check precommit upb down build logs ps enqueue status clean
+.PHONY: help venv venv-recreate install update check check-f precommit upb down build logs ps enqueue status clean
 
 help:
 	@echo "Targets:"
@@ -16,6 +16,7 @@ help:
 	@echo "  install          - install deps (dev) with uv (optional for dev)"
 	@echo "  update           - update deps (dev) with uv"
 	@echo "  check            - black --check, ruff, mypy, pytest"
+	@echo "  check-f          - black (format) + ruff --fix, then mypy, pytest"
 	@echo "  precommit        - pre-commit run -a"
 	@echo "  build     \t  - docker compose build"
 	@echo "  upb      \t  - docker compose build + up"
@@ -41,6 +42,9 @@ update: venv
 
 check:
 	$(BLACK) --check . && $(RUFF) check . && $(MYPY) . && $(PYTEST) -q
+
+check-f:
+	$(BLACK) . && $(RUFF) check --fix . && $(MYPY) . && $(PYTEST) -q
 
 precommit:
 	$(PRECOMMIT) run -a

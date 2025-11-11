@@ -54,6 +54,9 @@ async def process_job(job_id: str) -> None:
         _mark_failed(job_id, "No provider available")
         return
 
+    # Resolve options
+    opts = DownloadOptions.model_validate(options)
+
     # Download original with retries
     try:
         async for attempt in AsyncRetrying(
@@ -64,7 +67,7 @@ async def process_job(job_id: str) -> None:
             with attempt:
                 original_dir = storage.ensure_subdir(job_id, "original")
                 original_path_str, probe = await provider.download(
-                    url, str(original_dir)
+                    url, str(original_dir), respect_tou=opts.respect_tou
                 )
     except PermissionError as e:
         _mark_failed(job_id, str(e))
@@ -74,7 +77,6 @@ async def process_job(job_id: str) -> None:
     _update_job_metadata(job_id, probe)
 
     original_path = Path(original_path_str)
-    opts = DownloadOptions.model_validate(options)
     final_dir = storage.ensure_subdir(job_id, "final")
     final_path = await _produce_final(original_path, final_dir, opts)
 

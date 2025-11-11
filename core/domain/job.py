@@ -35,6 +35,11 @@ class DownloadOptions(BaseModel):
         default=True,
         description="If true, store original file in addition to transcoded",
     )
+    respect_tou: bool = Field(
+        default=False,
+        description="If true, only download when provider marks downloadable; "
+        "if false, allow stream downloads (m3u8) where possible",
+    )
 
 
 class Job(SQLModel, table=True):

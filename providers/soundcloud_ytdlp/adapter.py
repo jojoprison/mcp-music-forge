@@ -101,12 +101,12 @@ class SoundCloudYtDlpProvider(ProviderPort):
         )
 
     async def download(
-        self, url: str, dest_dir: str
+        self, url: str, dest_dir: str, *, respect_tou: bool = True
     ) -> tuple[str, ProbeResult]:
         Path(dest_dir).mkdir(parents=True, exist_ok=True)
         # Enforce can_download prior to downloading to respect ToU
         probe = await self.probe(url)
-        if not probe.can_download:
+        if respect_tou and not probe.can_download:
             raise PermissionError(
                 probe.reason_if_denied or "Track not allowed for download"
             )

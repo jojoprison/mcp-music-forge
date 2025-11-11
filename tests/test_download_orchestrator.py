@@ -30,7 +30,7 @@ class _FakeProvider(ProviderPort):
         )
 
     async def download(
-        self, url: str, dest_dir: str
+        self, url: str, dest_dir: str, *, respect_tou: bool = True
     ) -> tuple[str, ProbeResult]:
         d = Path(dest_dir)
         d.mkdir(parents=True, exist_ok=True)
