@@ -43,9 +43,9 @@ docker compose build
 docker compose up
 ```
 
-- API: http://localhost:8000
-- Admin: http://localhost:8000/admin
-- MCP HTTP: http://localhost:8000/mcp
+- API: http://localhost:8033
+- Admin: http://localhost:8033/admin
+- MCP HTTP: http://localhost:8033/mcp
 
 ## MCP Tools
 

@@ -10,7 +10,13 @@ PRECOMMIT=.venv/bin/pre-commit
 UVICORN=.venv/bin/uvicorn
 ARQ=.venv/bin/arq
 
-.PHONY: help venv install update freeze format lint lint-fix type test check precommit api mcp redis compose-up compose-down enqueue job status clean
+# Runtime defaults
+HOST ?= 0.0.0.0
+PORT ?= 8033
+DATA_DIR ?= data
+REDIS_URL ?= redis://localhost:6379/0
+
+.PHONY: help venv venv-recreate install update freeze format lint lint-fix type test check precommit api mcp redis compose-up compose-down enqueue job status clean
 
 help:
 	@echo "Targets:"
@@ -34,10 +40,14 @@ help:
 	@echo "  status JOB=..  - GET /jobs/{id}"
 
 venv:
-	$(UV) venv --python 3.12
-	@echo "Activate: source .venv/bin/activate"
+	@[ -d .venv ] || ($(UV) venv --python 3.12 && echo "Activate: source .venv/bin/activate")
 
-install: venv
+venv-recreate:
+	$(UV) venv --python 3.12 --clear
+	@echo "Recreated .venv. Activate: source .venv/bin/activate"
+
+install:
+	@[ -d .venv ] || $(UV) venv --python 3.12
 	$(UV) pip install -e '.[dev]'
 
 update: venv
@@ -68,7 +78,10 @@ precommit:
 	$(PRECOMMIT) run -a
 
 api:
-	$(UVICORN) api.main:app --reload
+	STORAGE_DIR=$(DATA_DIR) \
+	DATABASE_URL=sqlite:///$(DATA_DIR)/db.sqlite3 \
+	REDIS_URL=$(REDIS_URL) \
+	$(UVICORN) api.main:app --reload --host $(HOST) --port $(PORT)
 
 mcp:
 	$(PY) -m mcp_music_forge.mcp_app
@@ -84,11 +97,11 @@ compose-down:
 
 enqueue:
 	@test -n "$(URL)" || (echo "Usage: make enqueue URL=..." && exit 1)
-	curl -s -X POST 'http://127.0.0.1:8000/download?url=$(URL)' | jq .
+	curl -s -X POST 'http://127.0.0.1:8033/download?url=$(URL)' | jq .
 
 status:
 	@test -n "$(JOB)" || (echo "Usage: make status JOB=<job_id>" && exit 1)
-	curl -s 'http://127.0.0.1:8000/jobs/$(JOB)' | jq .
+	curl -s 'http://127.0.0.1:8033/jobs/$(JOB)' | jq .
 
 clean:
 	rm -rf .mypy_cache .pytest_cache .ruff_cache build dist *.egg-info

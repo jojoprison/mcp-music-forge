@@ -18,7 +18,7 @@
 - `REDIS_URL=redis://localhost:6379/0`
 - `FFMPEG_BIN=ffmpeg`
 - `API_HOST=0.0.0.0`
-- `API_PORT=8000`
+- `API_PORT=8033`
 - `SOUNDCLOUD_COOKIE_FILE=` (опционально, соблюдая ToU)
 
 ## Локальная сборка и запуск (через uv)
@@ -39,7 +39,7 @@ pytest -q
 
 # запустить API
 uvicorn api.main:app --reload
-# API: http://localhost:8000, Admin: http://localhost:8000/admin, MCP HTTP: /mcp
+# API: http://localhost:8033, Admin: http://localhost:8033/admin, MCP HTTP: /mcp
 
 # запустить MCP (stdio)
 python -m mcp_music_forge.mcp_app
@@ -55,8 +55,8 @@ docker compose build
 docker compose up
 
 # Доступ:
-# - API: http://localhost:8000
-# - Admin: http://localhost:8000/admin
+# - API: http://localhost:8033
+# - Admin: http://localhost:8033/admin
 ```
 
 ## Воркеры и очередь
@@ -73,10 +73,10 @@ arq workers.tasks.WorkerSettings -w 1
 
 ```bash
 # поставить задачу скачивания (SoundCloud ссылка)
-curl -X POST 'http://localhost:8000/download?url=https://soundcloud.com/artist/track'
+curl -X POST 'http://localhost:8033/download?url=https://soundcloud.com/artist/track'
 
 # статус задачи
-curl 'http://localhost:8000/jobs/<job_id>'
+curl 'http://localhost:8033/jobs/<job_id>'
 ```
 
 ## Деплой

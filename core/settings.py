@@ -32,7 +32,7 @@ class AppSettings(BaseSettings):
     ffmpeg_bin: str = Field(default="ffmpeg", alias="FFMPEG_BIN")
 
     api_host: str = Field(default="0.0.0.0", alias="API_HOST")
-    api_port: int = Field(default=8000, alias="API_PORT")
+    api_port: int = Field(default=8033, alias="API_PORT")
 
     # OTEL
     otel_endpoint: str | None = Field(

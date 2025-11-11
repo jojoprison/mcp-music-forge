@@ -36,13 +36,13 @@ pytest -q
 
 ```bash
 uvicorn api.main:app --reload
-# Ожидаемо: сервер слушает на 127.0.0.1:8000, лог FastAPI старта
+# Ожидаемо: сервер слушает на 127.0.0.1:8033, лог FastAPI старта
 ```
 
 Проверка `/health`:
 
 ```bash
-curl -s http://127.0.0.1:8000/health | jq
+curl -s http://127.0.0.1:8033/health | jq
 # Ожидаемо: {"status": "ok"}
 ```
 
@@ -59,14 +59,14 @@ docker run --rm -p 6379:6379 redis:7-alpine
 
 ```bash
 curl -s -X POST \
-  'http://127.0.0.1:8000/download?url=https://soundcloud.com/<artist>/<track>' | jq
+  'http://127.0.0.1:8033/download?url=https://soundcloud.com/<artist>/<track>' | jq
 # Ожидаемо: { "job_id": "<id>", "status": "queued" }
 ```
 
 Проверка статуса:
 
 ```bash
-curl -s 'http://127.0.0.1:8000/jobs/<job_id>' | jq
+curl -s 'http://127.0.0.1:8033/jobs/<job_id>' | jq
 # Ожидаемо: статус меняется: running -> succeeded; присутствуют метаданные трека
 # На диске артефакты: data/jobs/<job_id>/{original,final}/...
 ```
@@ -93,7 +93,7 @@ cp .env.example .env
 
 docker compose build
 docker compose up
-# Ожидаемо: api, worker, redis — подняты; API доступен на 8000
+# Ожидаемо: api, worker, redis — подняты; API доступен на 8033
 ```
 
 Далее повторите шаги «3. Очередь и скачивание через HTTP API».
