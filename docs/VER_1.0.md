@@ -49,8 +49,35 @@ make status JOB=<job_id>
 
 ## 4. MCP сервер
 
-- HTTP‑режим MCP доступен, когда запущен API (через Docker): endpoint смонтирован на
-  `GET /mcp` (см. `api/main.py`). Для stdio‑режима используйте локальный запуск только при разработке.
+- **Режим HTTP**: MCP смонтирован в API на `http://127.0.0.1:8033/mcp` (см. `api/main.py`).
+  Подключайте MCP‑клиент с поддержкой HTTP‑транспорта к этому endpoint.
+
+- **Поддерживаемые инструменты (tools):**
+  - `probe_url(url: str)` — определить провайдера и проверить, можно ли скачивать по ToU.
+  - `enqueue_download(url: str, options?: {
+      format?: "mp3"|"flac"|"aac"|"opus",
+      quality?: string,
+      embed_cover?: bool,
+      prefer_original?: bool,
+      tags?: Record<string,string>,
+      respect_tou?: bool
+    })` — поставить задачу в очередь. Возвращает `{ job_id, status }`.
+  - `get_job_status(job_id: str)` — вернуть статус и список артефактов (см. ниже).
+
+- **Ресурсы (resources) для клиента MCP:**
+  - `forge://jobs/{job_id}/original/{name}` — получить байты оригинального файла.
+  - `forge://jobs/{job_id}/final/{name}` — получить байты итогового файла.
+
+- **Поведение ToU:**
+  - По умолчанию берётся `ALLOW_STREAM_DOWNLOADS` из `.env`.
+  - Можно переопределить на уровне запроса: `options.respect_tou=false` позволит скачивать поток (m3u8), даже если у трека нет кнопки Download.
+
+- **Stdio (опционально, внутри Docker):**
+  Если нужен stdio‑режим для отладки клиента, можно запустить MCP‑сервер внутри контейнера API:
+  ```bash
+  docker compose exec -it api python -m mcp_music_forge.mcp_app
+  ```
+  В обычной работе достаточно HTTP‑режима (`/mcp`).
 
 ## 5. Управление стеком (Make)
 
