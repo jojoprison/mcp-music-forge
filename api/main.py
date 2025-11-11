@@ -75,8 +75,7 @@ app.add_middleware(
 app.mount("/mcp", mcp.streamable_http_app())
 
 
-class JobAdmin(ModelView):
-    model = Job
+class JobAdmin(ModelView, model=Job):
     column_list = [
         "id",
         "provider",
