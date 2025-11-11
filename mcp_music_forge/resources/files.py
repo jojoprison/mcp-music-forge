@@ -11,7 +11,7 @@ def _read(path: Path) -> bytes:
         return f.read()
 
 
-@mcp.resource("forge://jobs/{job_id}/original/{name}")
+@mcp.resource("music-forge://jobs/{job_id}/original/{name}")
 def read_original(job_id: str, name: str) -> bytes:
     """Read bytes of an original artifact."""
     storage = LocalStorage()
@@ -21,7 +21,7 @@ def read_original(job_id: str, name: str) -> bytes:
     return _read(p)
 
 
-@mcp.resource("forge://jobs/{job_id}/final/{name}")
+@mcp.resource("music-forge://jobs/{job_id}/final/{name}")
 def read_final(job_id: str, name: str) -> bytes:
     """Read bytes of a final artifact."""
     storage = LocalStorage()
