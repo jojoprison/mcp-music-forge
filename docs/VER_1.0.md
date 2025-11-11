@@ -1,119 +1,82 @@
-# VER_1.0 — Примеры команд и ожидаемые результаты
+# VER_1.0 — Примеры команд и ожидаемые результаты (Docker + Make)
 
-Ниже — минимальный набор проверок того, что проект собран и работает разными способами.
+Ниже — минимальный набор проверок того, что проект собран и работает через Docker Compose, управляется командами Make.
 
-## 0. Подготовка окружения
-
-```bash
-uv venv --python 3.12
-source .venv/bin/activate
-uv --version           # ожидаем увидеть версию uv
-python --version       # ожидаем Python 3.12.x
-```
-
-Установка зависимостей (dev):
+## 0. Подготовка (Docker-first)
 
 ```bash
-uv pip install -e '.[dev]'
+cp .env.example .env
+# при необходимости отредактируйте переменные в .env
+# по умолчанию сервисы слушают на 8033, данные пишутся в ./data
 ```
 
-## 1. Качество кода и тесты
+## 1. Сборка и запуск стека
 
 ```bash
-pre-commit run -a
-# Ожидаемо: все хуки Passed (black/ruff/mypy/pyupgrade)
-
-black --check .
-ruff check .
-mypy .
-pytest -q
-# Ожидаемо: все проверки зелёные, тесты проходят (вывод вида: ... [100%])
+make build   # docker compose build
+make upb     # docker compose up -d --build
+# Ожидаемо: подняты контейнеры redis, api, worker
 ```
 
-## 2. Smoke‑тест API (локально)
-
-Запуск API (в отдельном терминале):
-
-```bash
-uvicorn api.main:app --reload
-# Ожидаемо: сервер слушает на 127.0.0.1:8033, лог FastAPI старта
-```
-
-Проверка `/health`:
+## 2. Smoke‑тест API
 
 ```bash
 curl -s http://127.0.0.1:8033/health | jq
 # Ожидаемо: {"status": "ok"}
 ```
 
-## 3. Очередь и скачивание через HTTP API
+## 3. Очередь и скачивание
 
-Требуется Redis (любой способ):
-
-```bash
-# Вариант через Docker:
-docker run --rm -p 6379:6379 redis:7-alpine
-```
-
-Пример постановки задачи (SoundCloud ссылка, должна быть разрешена к скачиванию ToU):
+Постановка задачи через Make (HTTP под капотом):
 
 ```bash
-curl -s -X POST \
-  'http://127.0.0.1:8033/download?url=https://soundcloud.com/<artist>/<track>' | jq
+make enqueue URL="https://soundcloud.com/<artist>/<track>"
 # Ожидаемо: { "job_id": "<id>", "status": "queued" }
+
+make status JOB=<job_id>
+# Ожидаемо: статус меняется queued -> running -> succeeded
+# Артефакты: data/jobs/<job_id>/{original,final}/...
 ```
 
-Проверка статуса:
-
-```bash
-curl -s 'http://127.0.0.1:8033/jobs/<job_id>' | jq
-# Ожидаемо: статус меняется: running -> succeeded; присутствуют метаданные трека
-# На диске артефакты: data/jobs/<job_id>/{original,final}/...
-```
-
-Если трек не разрешён к скачиванию, API вернёт 400 с причиной.
+Замечания:
+- По умолчанию в примере `.env` включён строгий режим ToU
+  (`ALLOW_STREAM_DOWNLOADS=false`), т.е. качаются только треки с разрешением
+  на скачивание. Для попытки скачать поток (m3u8) у треков без кнопки Download —
+  установите `ALLOW_STREAM_DOWNLOADS=true` и перезапустите стек (`make upb`).
+- Для приватных/регион‑ограниченных треков добавьте куки:
+  `SOUNDCLOUD_COOKIE_FILE=/app/secret/soundcloud_cookies.txt` и примонтируйте
+  каталог с файлом в compose (для api и worker): `./secret:/app/secret:ro`.
 
 ## 4. MCP сервер
 
-Запуск MCP (stdio):
+- HTTP‑режим MCP доступен, когда запущен API (через Docker): endpoint смонтирован на
+  `GET /mcp` (см. `api/main.py`). Для stdio‑режима используйте локальный запуск только при разработке.
+
+## 5. Управление стеком (Make)
 
 ```bash
-python -m mcp_music_forge.mcp_app
-# Ожидаемо: процесс запускается и ждёт клиента MCP по stdio
-# Для практической проверки нужен совместимый MCP‑клиент
+make build     # сборка образов
+make upb       # поднять стек (detached) с пересборкой
+make logs      # посмотреть логи всех сервисов (api, worker, redis)
+make ps        # статус контейнеров
+make down      # остановить стек и удалить контейнеры/сети/volumes (compose down -v)
 ```
 
-HTTP‑режим MCP доступен, когда запущен API: `GET /mcp` (смонтировано в `api/main.py`).
-
-## 5. Docker Compose стек
+## 6. Качество кода и тесты (опционально для разработки)
 
 ```bash
-cp .env.example .env
-# При необходимости поправьте переменные окружения (STORAGE_DIR/DATABASE_URL/REDIS_URL)
+make venv         # создать .venv (uv)
+make install      # установить dev‑зависимости
+make update       # обновить dev‑зависимости
 
-docker compose build
-docker compose up
-# Ожидаемо: api, worker, redis — подняты; API доступен на 8033
-```
-
-Далее повторите шаги «3. Очередь и скачивание через HTTP API».
-
-## 6. Быстрые команды (Makefile)
-
-Если создан `Makefile`, доступны команды:
-
-```bash
-make install      # venv + зависимости
-make check        # black/ruff/mypy/pytest
-make api          # uvicorn api.main:app
-make mcp          # MCP stdio
-make redis        # локальный Redis через docker
-make compose-up   # docker compose up
+make check        # black --check, ruff check, mypy, pytest
+make check-f      # auto-fix: black + ruff --fix, затем mypy и pytest
+make precommit    # pre-commit run -a
 ```
 
 ## Подсказки
 
-- Для SoundCloud соблюдаем ToU: качаем только разрешённые треки. Для приватных/
-  ограниченных треков можно использовать `SOUNDCLOUD_COOKIE_FILE` (см. BUILD_RUN_DEPLOY.md).
-- Если ffmpeg отсутствует — установите `brew install ffmpeg` (macOS) или
-  пакет для вашей платформы.
+- Режим ToU: по умолчанию из `.env.example` — строгий (`ALLOW_STREAM_DOWNLOADS=false`).
+  Для разрешения потоковых скачиваний установите `ALLOW_STREAM_DOWNLOADS=true`.
+- Куки для SoundCloud: используйте `SOUNDCLOUD_COOKIE_FILE` и соответствующий volume в compose.
+- Путь хранения данных по умолчанию: `./data` на хосте, смонтирован в контейнеры как `/app/data`.
