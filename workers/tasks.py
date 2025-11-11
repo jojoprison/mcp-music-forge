@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from typing import Any
+
 from arq.connections import RedisSettings
-from arq.types import JobCtx
 
 from core.domain.job import Job, JobStatus
 from core.infra.db import create_db_and_tables, session_scope
@@ -9,17 +10,17 @@ from core.services.download_orchestrator import process_job
 from core.settings import get_settings
 
 
-async def startup(_: JobCtx) -> None:  # pragma: no cover - worker bootstrap
+async def startup(_: Any) -> None:  # pragma: no cover - worker bootstrap
     # Ensure DB tables exist
     create_db_and_tables()
 
 
-async def shutdown(_: JobCtx) -> None:  # pragma: no cover - worker bootstrap
+async def shutdown(_: Any) -> None:  # pragma: no cover - worker bootstrap
     # Nothing to cleanup yet
     return None
 
 
-async def process_download(ctx: JobCtx, job_id: str) -> None:
+async def process_download(ctx: Any, job_id: str) -> None:
     try:
         await process_job(job_id)
     except Exception as e:  # noqa: BLE001
