@@ -21,7 +21,7 @@ services:
     volumes:
       - ./data:/app/data
     ports:
-      - "8033:8000"
+      - "8033:8033"
     depends_on:
       - redis
 
