@@ -145,10 +145,26 @@ class JobAdmin(ModelView, model=Job):
         "id",
         "provider",
         "status",
+        "audio_link",
         "title",
         "artist",
         "created_at",
-        "audio",
+    ]
+    column_details_list = [
+        "id",
+        "provider",
+        "status",
+        "audio_link",
+        "title",
+        "artist",
+        "url",
+        "error",
+        "created_at",
+        "updated_at",
+        "fingerprint",
+        "duration",
+        "artwork_url",
+        "options",
     ]
     column_labels = {
         "id": "ID",
@@ -164,16 +180,20 @@ class JobAdmin(ModelView, model=Job):
         "duration": "Длительность",
         "artwork_url": "Обложка",
         "options": "Опции",
-        "audio": "Аудио",
+        "audio_link": "Аудио",
+    }
+    column_formatters = {
+        "audio_link": lambda m, a: JobAdmin.format_audio(m, a),
     }
 
-    def audio(self, obj: Job) -> Markup:
-        if obj.status != "succeeded":
+    @staticmethod
+    def format_audio(model: Job, attr: str) -> Markup:
+        if model.status != "succeeded":
             return Markup("-")
-        url = f"/jobs/{obj.id}/download"
+        url = f"/jobs/{model.id}/download"
         html = (
             f'<audio controls src="{url}" preload="none" style="height: 30px; width: 200px; vertical-align: middle;"></audio> '
-            f'<a href="{url}" download style="margin-left: 10px;">📥</a>'
+            f'<a href="{url}" download style="margin-left: 10px; text-decoration: none;">📥</a>'
         )
         return Markup(html)
 

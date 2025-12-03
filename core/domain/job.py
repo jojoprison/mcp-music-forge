@@ -65,6 +65,11 @@ class Job(SQLModel, table=True):
     def __str__(self) -> str:
         return f"({self.id}) {self.title or self.url}"
 
+    @property
+    def audio_link(self) -> str:
+        """Virtual column for sqladmin"""
+        return self.id
+
 
 class ArtifactKind(str, enum.Enum):
     original = "original"
