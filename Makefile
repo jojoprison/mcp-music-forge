@@ -48,13 +48,13 @@ enq:
 	@echo "Enqueueing: $(URL)"
 	@curl -s -X POST 'http://127.0.0.1:8033/download?url=$(URL)' > .last_response.json
 	@cat .last_response.json | jq .
-	@$(eval JOB_ID := $(shell cat .last_response.json | jq -r '.job_id // empty'))
-	@if [ -n "$(JOB_ID)" ]; then \
-		echo "$(JOB_ID)" > .latest_job_id; \
+	@JOB_ID=$$(cat .last_response.json | jq -r '.job_id // empty'); \
+	if [ -n "$$JOB_ID" ]; then \
+		echo "$$JOB_ID" > .latest_job_id; \
 		echo ""; \
 		echo "Wait a moment and checking status..."; \
 		sleep 1; \
-		make stat JOB=$(JOB_ID); \
+		make stat JOB=$$JOB_ID; \
 	else \
 		echo "Error: Could not extract job_id from response"; \
 	fi
