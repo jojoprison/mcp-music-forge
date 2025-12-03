@@ -3,8 +3,9 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from sqladmin import Admin, ModelView
 
 from core.domain.job import Job
@@ -86,6 +87,10 @@ app.mount("/mcp", mcp.streamable_http_app())
 
 
 class JobAdmin(ModelView, model=Job):
+    name = "Задание"
+    name_plural = "Задания"
+    icon = "fa-solid fa-music"
+
     column_list = [
         "id",
         "provider",
@@ -94,10 +99,24 @@ class JobAdmin(ModelView, model=Job):
         "artist",
         "created_at",
     ]
-    name_plural = "Jobs"
+    column_labels = {
+        "id": "ID",
+        "provider": "Провайдер",
+        "status": "Статус",
+        "title": "Название",
+        "artist": "Исполнитель",
+        "created_at": "Создано",
+        "url": "Ссылка",
+        "error": "Ошибка",
+        "updated_at": "Обновлено",
+        "fingerprint": "Отпечаток",
+        "duration": "Длительность",
+        "artwork_url": "Обложка",
+        "options": "Опции",
+    }
 
 
-_admin = Admin(app=app, engine=get_engine())
+_admin = Admin(app=app, engine=get_engine(), title="Музыкальная Кузница")
 _admin.add_view(JobAdmin)
 
 

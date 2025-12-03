@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -59,8 +59,11 @@ class Job(SQLModel, table=True):
     duration: int | None = None
     artwork_url: str | None = None
 
-    created_at: datetime = SQLField(default_factory=lambda: datetime.now(UTC))
-    updated_at: datetime = SQLField(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = SQLField(default_factory=datetime.now)
+    updated_at: datetime = SQLField(default_factory=datetime.now)
+
+    def __str__(self) -> str:
+        return f"({self.id}) {self.title or self.url}"
 
 
 class ArtifactKind(str, enum.Enum):
