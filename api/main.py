@@ -191,7 +191,27 @@ class JobAdmin(ModelView, model=Job):
         if model.status != "succeeded":
             return Markup("-")
         url = f"/jobs/{model.id}/download"
+        
+        # JavaScript for exclusive playback (pause others when one starts)
+        # We use a flag on window to ensure we only attach the listener once.
+        script = """
+        <script>
+            if (!window._audioExclusiveInit) {
+                window._audioExclusiveInit = true;
+                document.addEventListener('play', function(e){
+                    var audios = document.getElementsByTagName('audio');
+                    for(var i = 0, len = audios.length; i < len;i++){
+                        if(audios[i] != e.target){
+                            audios[i].pause();
+                        }
+                    }
+                }, true);
+            }
+        </script>
+        """
+        
         html = (
+            f'{script}'
             f'<audio controls src="{url}" preload="none" style="height: 30px; width: 200px; vertical-align: middle;"></audio> '
             f'<a href="{url}" download style="margin-left: 10px; text-decoration: none;">📥</a>'
         )
