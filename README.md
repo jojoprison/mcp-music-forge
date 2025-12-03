@@ -23,12 +23,7 @@ tagging and cover art embedding, HTTP API, MCP tools, audio workers.
 
 ```bash
 cp .env.example .env
-
-# build and start the stack
-docker compose up -d --build
-
-# verify
-curl -s http://localhost:8033/health | jq
+make up        # build and start the stack
 ```
 
 **Endpoints:**
@@ -38,10 +33,10 @@ curl -s http://localhost:8033/health | jq
 
 **Management:**
 ```bash
-docker compose logs -f      # logs
-docker compose ps           # container status
-docker compose restart      # restart
-docker compose down -v      # stop and remove
+make logs      # logs
+make ps        # container status
+make restart   # restart
+make down      # stop and remove
 ```
 
 ---
@@ -49,25 +44,32 @@ docker compose down -v      # stop and remove
 ### Variant B: Local (uv)
 
 ```bash
-# create env and install deps
-uv venv --python 3.12
+make install   # create .venv, install deps, copy .env
 source .venv/bin/activate
-uv pip install -e '.[dev]'
 
-# copy .env
-cp .env.example .env
-
-# checks
-ruff check .
-black --check .
-mypy .
-pytest -q
+make lint      # ruff + black
+make test      # mypy + pytest
 
 # run API
 uvicorn api.main:app --reload
 
 # MCP (stdio)
 python -m mcp_music_forge.mcp_app
+```
+
+## API Examples
+
+```bash
+# health check
+curl -s http://localhost:8033/health | jq
+# {"status": "ok"}
+
+# enqueue download (SoundCloud URL with allowed download per ToU)
+curl -s -X POST 'http://localhost:8033/download?url=https://soundcloud.com/artist/track' | jq
+# {"job_id": "abc123", "status": "queued"}
+
+# check job status
+curl -s http://localhost:8033/jobs/<job_id> | jq
 ```
 
 ## MCP Tools

@@ -24,12 +24,7 @@
 
 ```bash
 cp .env.example .env
-
-# сборка и запуск стека
-docker compose up -d --build
-
-# проверка
-curl -s http://localhost:8033/health | jq
+make up        # сборка и запуск стека
 ```
 
 **Эндпоинты:**
@@ -46,33 +41,26 @@ curl -s http://localhost:8033/health | jq
 Управление:
 
 ```bash
-docker compose logs -f      # логи
-docker compose ps           # статус контейнеров
-docker compose restart      # рестарт
-docker compose down -v      # остановка и удаление
+make logs      # логи
+make ps        # статус контейнеров
+make restart   # рестарт
+make down      # остановка и удаление
 ```
 
 ## Локальная сборка и запуск (через uv) — опционально
 
 ```bash
-# создать окружение
-uv venv --python 3.12
+make install   # создать .venv, установить зависимости, скопировать .env
 source .venv/bin/activate
 
-# установить зависимости (включая dev)
-uv pip install -e '.[dev]'
+make lint      # ruff + black
+make test      # mypy + pytest
 
-# прогнать проверки
-black --check .
-ruff check .
-mypy .
-pytest -q
-
-# запустить API (локально)
+# запустить API
 uvicorn api.main:app --reload
 # API: http://localhost:8033, Admin: http://localhost:8033/admin, MCP HTTP: /mcp
 
-# запустить MCP (stdio) локально
+# запустить MCP (stdio)
 python -m mcp_music_forge.mcp_app
 ```
 
@@ -89,11 +77,16 @@ arq workers.tasks.WorkerSettings
 ## Примеры запросов
 
 ```bash
-# поставить задачу скачивания (SoundCloud ссылка)
-curl -X POST 'http://localhost:8033/download?url=https://soundcloud.com/artist/track'
+# проверка здоровья
+curl -s http://localhost:8033/health | jq
+# {"status": "ok"}
+
+# поставить задачу скачивания (SoundCloud ссылка с разрешённым скачиванием по ToU)
+curl -s -X POST 'http://localhost:8033/download?url=https://soundcloud.com/artist/track' | jq
+# {"job_id": "abc123", "status": "queued"}
 
 # статус задачи
-curl 'http://localhost:8033/jobs/<job_id>'
+curl -s http://localhost:8033/jobs/<job_id> | jq
 ```
 
 ## Деплой
