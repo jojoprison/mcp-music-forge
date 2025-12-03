@@ -5,6 +5,7 @@
 help:
 	@echo ""
 	@echo "  Docker Compose"
+	@echo "    up           docker compose up -d"
 	@echo "    upb          docker compose up -d --build"
 	@echo "    down         docker compose down -v"
 	@echo "    logs         docker compose logs -f"
@@ -25,6 +26,9 @@ help:
 # ─────────────────────────────────────────────────────────────────────────────
 # Docker Compose
 # ─────────────────────────────────────────────────────────────────────────────
+up:
+	docker compose up -d
+
 upb:
 	docker compose up -d --build
 
