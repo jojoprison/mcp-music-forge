@@ -25,14 +25,17 @@
 ```bash
 cp .env.example .env
 
-# сборка образов и запуск стека
-make compose-build
-make compose-up
+# сборка и запуск стека
+docker compose up -d --build
 
-# Доступ:
-# - API: http://localhost:8033
-# - Admin: http://localhost:8033/admin
+# проверка
+curl -s http://localhost:8033/health | jq
 ```
+
+**Эндпоинты:**
+- API: http://localhost:8033
+- Админка: http://localhost:8033/admin
+- MCP HTTP: http://localhost:8033/mcp
 
 В стеке поднимаются:
 
@@ -40,26 +43,13 @@ make compose-up
 - `api` — HTTP API + MCP HTTP
 - `worker` — ARQ воркер, обрабатывающий задания
 
-Проверка:
+Управление:
 
 ```bash
-curl -s http://localhost:8033/health | jq
-# {"status": "ok"}
-
-# Поставить задачу (SoundCloud ссылка с разрешённым скачиванием по ToU)
-make enqueue URL="https://soundcloud.com/artist/track"
-
-# Проверить статус
-make status JOB=<job_id>
-```
-
-Полезные команды:
-
-```bash
-make compose-logs     # логи всех сервисов
-make compose-ps       # статус контейнеров
-make compose-restart  # рестарт сервисов
-make compose-down     # остановить и удалить
+docker compose logs -f      # логи
+docker compose ps           # статус контейнеров
+docker compose restart      # рестарт
+docker compose down -v      # остановка и удаление
 ```
 
 ## Локальная сборка и запуск (через uv) — опционально

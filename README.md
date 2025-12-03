@@ -1,5 +1,9 @@
 # MCP Music Forge
 
+English | **[Русский](docs/README_RU.md)**
+
+---
+
 A scalable MCP plugin/service for downloading and processing audio:
 SoundCloud (starting point), then YouTube/Yandex Music/Spotify; transcoding,
 tagging and cover art embedding, HTTP API, MCP tools, audio workers.
@@ -15,37 +19,56 @@ tagging and cover art embedding, HTTP API, MCP tools, audio workers.
 
 ## Quickstart
 
-### Variant A: uv + local
+### Variant A: Docker Compose (recommended)
 
 ```bash
+cp .env.example .env
+
+# build and start the stack
+docker compose up -d --build
+
+# verify
+curl -s http://localhost:8033/health | jq
+```
+
+**Endpoints:**
+- API: http://localhost:8033
+- Admin: http://localhost:8033/admin
+- MCP HTTP: http://localhost:8033/mcp
+
+**Management:**
+```bash
+docker compose logs -f      # logs
+docker compose ps           # container status
+docker compose restart      # restart
+docker compose down -v      # stop and remove
+```
+
+---
+
+### Variant B: Local (uv)
+
+```bash
+# create env and install deps
 uv venv --python 3.12
 source .venv/bin/activate
 uv pip install -e '.[dev]'
 
+# copy .env
+cp .env.example .env
+
 # checks
-black --check .
 ruff check .
+black --check .
 mypy .
 pytest -q
 
-# API dev
+# run API
 uvicorn api.main:app --reload
-# MCP stdio
+
+# MCP (stdio)
 python -m mcp_music_forge.mcp_app
 ```
-
-### Variant B: Docker Compose
-
-```bash
-cp .env.example .env
-# build and start the stack
-docker compose build
-docker compose up
-```
-
-- API: http://localhost:8033
-- Admin: http://localhost:8033/admin
-- MCP HTTP: http://localhost:8033/mcp
 
 ## MCP Tools
 
@@ -56,11 +79,11 @@ docker compose up
 
 ## Documentation
 
-- CI/CD: `docs/CI_CD.md`
-- Build/Run/Deploy: `docs/BUILD_RUN_DEPLOY.md`
-- Architecture: `docs/ARCHITECTURE.md`
+- [Build / Run / Deploy](docs/BUILD_RUN_DEPLOY.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [CI/CD](docs/CI_CD.md)
 
 ## Legal Notes
 
 - SoundCloud provider respects ToU: we only download if the track is downloadable (`downloadable`/`download_url`).
-  Cookie file support is available, but use it strictly within the service's rules.
+- Cookie file support is available, but use it strictly within the service's rules.
