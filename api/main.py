@@ -68,6 +68,55 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="MCP Music Forge", version="0.1.0", lifespan=lifespan)
 
+
+@app.middleware("http")
+async def intercept_mcp_browser_request(request: Request, call_next):
+    # Check if accessing /mcp root with a browser (Accept: text/html)
+    # to show a helpful page instead of JSON error
+    if (
+        request.url.path.rstrip("/") == "/mcp"
+        and "text/html" in request.headers.get("accept", "")
+    ):
+        html_content = """
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>MCP Music Forge</title>
+                <style>
+                    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; color: #333; }
+                    code { background: #f4f4f4; padding: 0.2em 0.4em; border-radius: 3px; }
+                    .note { background: #eef; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; }
+                    a { color: #0066cc; text-decoration: none; }
+                    a:hover { text-decoration: underline; }
+                </style>
+            </head>
+            <body>
+                <h1>MCP Music Forge Server</h1>
+                <div class="note">
+                    <p><strong>Status:</strong> Running 🟢</p>
+                </div>
+                <p>This endpoint provides the <strong>Model Context Protocol (MCP)</strong> interface via SSE (Server-Sent Events).</p>
+                <p>It is intended for MCP clients (like Claude Desktop), not direct browser viewing.</p>
+
+                <h2>How to connect</h2>
+                <p>Configure your MCP client with:</p>
+                <ul>
+                    <li><strong>URL:</strong> <code>http://localhost:8033/mcp</code> (or <code>.../mcp/sse</code>)</li>
+                    <li><strong>Type:</strong> SSE</li>
+                </ul>
+
+                <hr>
+                <p>
+                    <a href="/docs">API Documentation</a> |
+                    <a href="/admin">Admin Panel</a>
+                </p>
+            </body>
+        </html>
+        """
+        return HTMLResponse(content=html_content)
+    return await call_next(request)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
