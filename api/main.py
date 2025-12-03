@@ -5,7 +5,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from markupsafe import Markup
 from sqladmin import Admin, ModelView
 
 from core.domain.job import Job
@@ -147,6 +148,7 @@ class JobAdmin(ModelView, model=Job):
         "title",
         "artist",
         "created_at",
+        "audio",
     ]
     column_labels = {
         "id": "ID",
@@ -162,7 +164,18 @@ class JobAdmin(ModelView, model=Job):
         "duration": "Длительность",
         "artwork_url": "Обложка",
         "options": "Опции",
+        "audio": "Аудио",
     }
+
+    def audio(self, obj: Job) -> Markup:
+        if obj.status != "succeeded":
+            return Markup("-")
+        url = f"/jobs/{obj.id}/download"
+        html = (
+            f'<audio controls src="{url}" preload="none" style="height: 30px; width: 200px; vertical-align: middle;"></audio> '
+            f'<a href="{url}" download style="margin-left: 10px;">📥</a>'
+        )
+        return Markup(html)
 
 
 _admin = Admin(app=app, engine=get_engine(), title="Музыкальная Кузница")
@@ -190,3 +203,22 @@ async def api_job(job_id: str) -> GetJobStatusResult:
         return await get_job_status(job_id)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+@app.get("/jobs/{job_id}/download")
+async def download_job_artifact(job_id: str):
+    """
+    Download the final artifact for a job.
+    """
+    settings = get_settings()
+    final_dir = settings.storage_dir / "jobs" / job_id / "final"
+    if not final_dir.exists():
+        raise HTTPException(status_code=404, detail="Job files not found")
+
+    # Find first file
+    # Note: this is a simple implementation that takes the first file found
+    files = [f for f in final_dir.iterdir() if f.is_file() and not f.name.startswith(".")]
+    if not files:
+        raise HTTPException(status_code=404, detail="No artifacts found")
+
+    return FileResponse(files[0], filename=files[0].name)
