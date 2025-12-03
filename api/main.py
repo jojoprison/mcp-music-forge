@@ -236,9 +236,26 @@ async def download_job_artifact(job_id: str):
         raise HTTPException(status_code=404, detail="Job files not found")
 
     # Find first file
-    # Note: this is a simple implementation that takes the first file found
+    # Prioritize audio files
+    audio_extensions = {".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg", ".opus"}
     files = [f for f in final_dir.iterdir() if f.is_file() and not f.name.startswith(".")]
-    if not files:
-        raise HTTPException(status_code=404, detail="No artifacts found")
+    
+    audio_files = [f for f in files if f.suffix.lower() in audio_extensions]
+    
+    if audio_files:
+        file_to_serve = audio_files[0]
+    else:
+        # Fallback: try to find anything that is NOT an image or json
+        other_files = [
+            f for f in files 
+            if f.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp", ".json"}
+        ]
+        if other_files:
+            file_to_serve = other_files[0]
+        elif files:
+             # Last resort: serve whatever is there (e.g. just an image if download failed partially)
+            file_to_serve = files[0]
+        else:
+            raise HTTPException(status_code=404, detail="No artifacts found")
 
-    return FileResponse(files[0], filename=files[0].name)
+    return FileResponse(file_to_serve, filename=file_to_serve.name)
