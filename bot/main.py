@@ -37,9 +37,15 @@ def is_valid_url(text: str) -> bool:
 async def command_start_handler(message: Message) -> None:
     await message.answer(f"Hello, {message.from_user.full_name}! Send me a SoundCloud or YouTube link to download.")
 
-@dp.message(F.text)
+@dp.message()
 async def handle_message(message: Message) -> None:
-    text = message.text.strip()
+    text = message.text
+    
+    if not text:
+        await message.answer("Please send a valid YouTube or SoundCloud link.")
+        return
+
+    text = text.strip()
     
     if not is_valid_url(text):
         await message.answer("Please send a valid YouTube or SoundCloud link.")
