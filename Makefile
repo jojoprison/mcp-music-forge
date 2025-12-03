@@ -13,7 +13,7 @@ PRECOMMIT=.venv/bin/pre-commit
 help:
 	@echo "Targets:"
 	@echo "  venv             - create .venv via uv (optional for dev)"
-	@echo "  install          - install deps (dev) with uv (optional for dev)"
+	@echo "  install          - install deps (dev) with uv and bootstrap .env (optional for dev)"
 	@echo "  update           - update deps (dev) with uv"
 	@echo "  check            - black --check, ruff, mypy, pytest"
 	@echo "  check-f          - black (format) + ruff --fix, then mypy, pytest"
@@ -36,6 +36,7 @@ venv-recreate:
 install:
 	@[ -d .venv ] || $(UV) venv --python 3.12
 	$(UV) pip install -e '.[dev]'
+	@[ -f .env ] || (cp .env.example .env && echo "Created .env from .env.example")
 
 update: venv
 	$(UV) pip install -U -e '.[dev]'
