@@ -39,6 +39,7 @@ dependencies = [
     "opentelemetry-instrumentation-logging>=0.48b0",
     "opentelemetry-instrumentation-urllib>=0.48b0",
     "opentelemetry-instrumentation-redis>=0.48b0",
+    "aiogram>=3.22.0",
 ]
 
 [project.optional-dependencies]

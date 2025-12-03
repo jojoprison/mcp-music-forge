@@ -47,6 +47,9 @@ class AppSettings(BaseSettings):
         default="mcp-music-forge", alias="OTEL_SERVICE_NAME"
     )
 
+    # Telegram Bot
+    telegram_bot_token: str | None = Field(default=None, alias="TELEGRAM_BOT_TOKEN")
+
 
 class RuntimeContext(BaseModel):
     settings: AppSettings

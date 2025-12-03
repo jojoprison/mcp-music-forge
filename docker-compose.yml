@@ -38,3 +38,21 @@ services:
     depends_on:
       - redis
     command: [ "arq", "workers.tasks.WorkerSettings" ]
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - TZ=${TZ:-UTC}
+      # Bot doesn't strictly need DB/Storage if calling API, 
+      # but settings initialization might require paths to exist.
+      - STORAGE_DIR=/app/data
+      - DATABASE_URL=sqlite:////app/data/db.sqlite3
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - api
+    command: ["python", "bot/main.py"]
