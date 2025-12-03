@@ -53,6 +53,7 @@ dev = [
     "types-redis>=4.6.0",
     "types-requests>=2.32.0.0",
     "httpx[cli]>=0.27",
+    "watchfiles>=0.21",
 ]
 
 [build-system]
