@@ -41,18 +41,29 @@ ps:
 # API Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 # Default test URL
-DEFAULT_URL=https://soundcloud.com/cheetah_33/md_33
+DEFAULT_SC_URL=https://soundcloud.com/cheetah_33/md_33
 
 enq:
-	@$(eval URL ?= $(DEFAULT_URL))
+	@$(eval URL ?= $(DEFAULT_SC_URL))
 	@echo "Enqueueing: $(URL)"
-	@curl -s -X POST 'http://127.0.0.1:8033/download?url=$(URL)' | tee .last_response.json | jq .
-	@cat .last_response.json | jq -r '.job_id // empty' > .latest_job_id
-	@rm .last_response.json
+	@curl -s -X POST 'http://127.0.0.1:8033/download?url=$(URL)' > .last_response.json
+	@cat .last_response.json | jq .
+	@$(eval JOB_ID := $(shell cat .last_response.json | jq -r '.job_id // empty'))
+	@if [ -n "$(JOB_ID)" ]; then \
+		echo "$(JOB_ID)" > .latest_job_id; \
+		echo ""; \
+		echo "Wait a moment and checking status..."; \
+		sleep 1; \
+		make stat JOB=$(JOB_ID); \
+	else \
+		echo "Error: Could not extract job_id from response"; \
+	fi
+	@rm -f .last_response.json
 
 stat:
 	@$(eval JOB ?= $(shell cat .latest_job_id 2>/dev/null))
 	@test -n "$(JOB)" || (echo "Usage: make stat JOB=<job_id> (or run 'make enq' first)" && exit 1)
+	@echo "Checking status for JOB=$(JOB)"
 	@curl -s 'http://127.0.0.1:8033/jobs/$(JOB)' | jq .
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -74,3 +85,4 @@ test:
 
 clean:
 	rm -rf .mypy_cache .pytest_cache .ruff_cache build dist *.egg-info
+	find . -type d -name "__pycache__" -exec rm -rf {} +
