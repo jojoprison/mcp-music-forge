@@ -10,3 +10,8 @@ services:
     # Hot reload для воркера: при изменении кода нужен restart контейнера
     # (arq --watch требует watchfiles, который не в основных зависимостях)
     command: ["arq", "workers.tasks.WorkerSettings"]
+
+  bot:
+    volumes:
+      - .:/app
+    command: ["python", "bot/main.py"]
