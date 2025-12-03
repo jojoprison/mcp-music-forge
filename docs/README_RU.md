@@ -8,22 +8,13 @@
 SoundCloud (для начала), далее YouTube/Яндекс.Музыка/Spotify; транскодирование,
 теги и обложки, HTTP API, MCP tools, воркеры.
 
-## Обзор проекта
-
-- **MCP Server** (`mcp_music_forge/`): управление заданиями, провайдер ресурсов, MCP tools.
-- **HTTP API** (`api/`): `POST /download`, `GET /jobs/{id}`, `/health`, админка.
-- **Providers** (`providers/`): адаптеры к источникам (начинаем с SoundCloud).
-- **Transcoder** (`transcoder/`): обёртка над `ffmpeg`.
-- **Storage** (`storage/`): локальная FS (можно заменить на S3 и т.д.).
-- **Queue** (`core/services/queue.py`): ARQ + Redis; обёртка в `workers/`.
-
 ## Быстрый старт
 
 ### Вариант A: Docker Compose (рекомендуется)
 
 ```bash
 cp .env.example .env
-make up        # сборка и запуск стека
+make upb       # сборка и запуск стека
 ```
 
 **Эндпоинты:**
@@ -35,7 +26,7 @@ make up        # сборка и запуск стека
 ```bash
 make logs      # логи
 make ps        # статус контейнеров
-make restart   # рестарт
+make up        # прост поднять
 make down      # остановка и удаление
 ```
 
@@ -47,7 +38,7 @@ make down      # остановка и удаление
 make install   # создать .venv, установить зависимости, скопировать .env
 source .venv/bin/activate
 
-make lint      # ruff + black
+make lint      # ruff + black + mypy
 make test      # mypy + pytest
 
 # запуск API
@@ -78,6 +69,15 @@ curl -s http://localhost:8033/jobs/<job_id> | jq
 - **`enqueue_download`**: создание задания и постановка в очередь.
 - **`get_job_status`**: статус, артефакты, ссылки на файлы как MCP resources.
 - Resources: `forge://jobs/<job_id>/{original|final}/<filename>` (байты файла).
+
+## Обзор проекта
+
+- **MCP Server** (`mcp_music_forge/`): управление заданиями, провайдер ресурсов, MCP tools.
+- **HTTP API** (`api/`): `POST /download`, `GET /jobs/{id}`, `/health`, админка.
+- **Providers** (`providers/`): адаптеры к источникам (начинаем с SoundCloud).
+- **Transcoder** (`transcoder/`): обёртка над `ffmpeg`.
+- **Storage** (`storage/`): локальная FS (можно заменить на S3 и т.д.).
+- **Queue** (`core/services/queue.py`): ARQ + Redis; обёртка в `workers/`.
 
 ## Документация
 

@@ -8,22 +8,13 @@ A scalable MCP plugin/service for downloading and processing audio:
 SoundCloud (starting point), then YouTube/Yandex Music/Spotify; transcoding,
 tagging and cover art embedding, HTTP API, MCP tools, audio workers.
 
-## Project Overview
-
-- **MCP Server** (`mcp_music_forge/`): job management, resource provider, and MCP tools.
-- **HTTP API** (`api/`): `POST /download`, `GET /jobs/{id}`, `/health`, admin interface.
-- **Providers** (`providers/`): adapters for sources (starting with SoundCloud).
-- **Transcoder** (`transcoder/`): a wrapper around `ffmpeg`.
-- **Storage** (`storage/`): local FS (can be replaced with S3, etc.).
-- **Queue** (`core/services/queue.py`): ARQ + Redis; a wrapper in `workers/`.
-
 ## Quickstart
 
 ### Variant A: Docker Compose (recommended)
 
 ```bash
 cp .env.example .env
-make up        # build and start the stack
+make upb       # build and start the stack
 ```
 
 **Endpoints:**
@@ -35,7 +26,7 @@ make up        # build and start the stack
 ```bash
 make logs      # logs
 make ps        # container status
-make restart   # restart
+make up        # just up
 make down      # stop and remove
 ```
 
@@ -47,7 +38,7 @@ make down      # stop and remove
 make install   # create .venv, install deps, copy .env
 source .venv/bin/activate
 
-make lint      # ruff + black
+make lint      # ruff + black + mypy
 make test      # mypy + pytest
 
 # run API
@@ -78,6 +69,15 @@ curl -s http://localhost:8033/jobs/<job_id> | jq
 - **`enqueue_download`**: create/duplicate a job, put it in the queue.
 - **`get_job_status`**: status, artifacts, file links as MCP resources.
 - Resources: `forge://jobs/<job_id>/{original|final}/<filename>` (file bytes).
+
+## Project Overview
+
+- **MCP Server** (`mcp_music_forge/`): job management, resource provider, and MCP tools.
+- **HTTP API** (`api/`): `POST /download`, `GET /jobs/{id}`, `/health`, admin interface.
+- **Providers** (`providers/`): adapters for sources (starting with SoundCloud).
+- **Transcoder** (`transcoder/`): a wrapper around `ffmpeg`.
+- **Storage** (`storage/`): local FS (can be replaced with S3, etc.).
+- **Queue** (`core/services/queue.py`): ARQ + Redis; a wrapper in `workers/`.
 
 ## Documentation
 
