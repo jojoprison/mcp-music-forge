@@ -1,13 +1,19 @@
 # Makefile for mcp-music-forge
 
-.PHONY: help install lint test upb down logs ps clean enq stat
+.PHONY: help install lint test upb down logs ps clean enq stat dup dupb ddown
 
 help:
 	@echo ""
-	@echo "  Docker Compose"
-	@echo "    up           docker compose up -d"
-	@echo "    upb          docker compose up -d --build"
-	@echo "    down         docker compose down -v"
+	@echo "  Docker Compose (Production / Stable)"
+	@echo "    up           docker compose -f docker-compose.yml up -d"
+	@echo "    upb          docker compose -f docker-compose.yml up -d --build"
+	@echo "    down         docker compose -f docker-compose.yml down -v"
+	@echo ""
+	@echo "  Docker Compose (Development with Hot Reload)"
+	@echo "    dup          docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d"
+	@echo "    dupb         docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build"
+	@echo "    ddown        docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v"
+	@echo ""
 	@echo "    logs         docker compose logs -f"
 	@echo "    ps           docker compose ps"
 	@echo ""
@@ -24,22 +30,41 @@ help:
 	@echo ""
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Docker Compose
+# Docker Compose (Base)
 # ─────────────────────────────────────────────────────────────────────────────
+COMPOSE_BASE = -f docker-compose.yml
+
 up:
-	docker compose up -d
+	docker compose $(COMPOSE_BASE) up -d
 
 upb:
-	docker compose up -d --build
+	docker compose $(COMPOSE_BASE) up -d --build
 
 down:
-	docker compose down -v
+	docker compose $(COMPOSE_BASE) down -v
 
 logs:
 	docker compose logs -f
 
 ps:
 	docker compose ps
+
+restart:
+	docker compose $(COMPOSE_BASE) restart
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Docker Compose (Dev - Hot Reload)
+# ─────────────────────────────────────────────────────────────────────────────
+COMPOSE_DEV = -f docker-compose.yml -f docker-compose.dev.yml
+
+dup:
+	docker compose $(COMPOSE_DEV) up -d
+
+dupb:
+	docker compose $(COMPOSE_DEV) up -d --build
+
+ddown:
+	docker compose $(COMPOSE_DEV) down -v
 
 # ─────────────────────────────────────────────────────────────────────────────
 # API Helpers

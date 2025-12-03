@@ -1,0 +1,13 @@
+services:
+  api:
+    volumes:
+      - .:/app
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8033", "--reload"]
+
+  worker:
+    volumes:
+      - .:/app
+    # Для воркера тоже полезно иметь hot reload кода, хотя arq watch сложнее.
+    # Но монтирование позволит воркеру видеть новый код после рестарта процесса.
+    # arq по умолчанию имеет --watch, попробуем его включить.
+    command: ["arq", "workers.tasks.WorkerSettings", "--watch", "/app"]
