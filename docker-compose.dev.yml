@@ -7,7 +7,6 @@ services:
   worker:
     volumes:
       - .:/app
-    # Для воркера тоже полезно иметь hot reload кода, хотя arq watch сложнее.
-    # Но монтирование позволит воркеру видеть новый код после рестарта процесса.
-    # arq по умолчанию имеет --watch, попробуем его включить.
-    command: ["arq", "workers.tasks.WorkerSettings", "--watch", "/app"]
+    # Hot reload для воркера: при изменении кода нужен restart контейнера
+    # (arq --watch требует watchfiles, который не в основных зависимостях)
+    command: ["arq", "workers.tasks.WorkerSettings"]
