@@ -1,58 +1,30 @@
-# Makefile for mcp-music-forge (Docker-first)
+# Makefile for mcp-music-forge
 
-UV=uv
-PY=.venv/bin/python
-BLACK=.venv/bin/black
-RUFF=.venv/bin/ruff
-MYPY=.venv/bin/mypy
-PYTEST=.venv/bin/pytest
-PRECOMMIT=.venv/bin/pre-commit
-
-.PHONY: help venv venv-recreate install update check check-f precommit upb down build logs ps enqueue status clean
+.PHONY: help install lint test upb down logs ps clean enq stat
 
 help:
-	@echo "Targets:"
-	@echo "  venv             - create .venv via uv (optional for dev)"
-	@echo "  install          - install deps (dev) with uv and bootstrap .env (optional for dev)"
-	@echo "  update           - update deps (dev) with uv"
-	@echo "  check            - black --check, ruff, mypy, pytest"
-	@echo "  check-f          - black (format) + ruff --fix, then mypy, pytest"
-	@echo "  precommit        - pre-commit run -a"
-	@echo "  build     \t  - docker compose build"
-	@echo "  upb      \t  - docker compose build + up"
-	@echo "  down        \t  - docker compose down -v"
-	@echo "  logs     \t  - docker compose logs -f"
-	@echo "  ps       \t  - docker compose ps"
-	@echo "  enqueue URL=..   - POST /download?url=.. (expects API on 8033)"
-	@echo "  status JOB=..    - GET /jobs/{id} (expects API on 8033)"
+	@echo ""
+	@echo "  Docker Compose"
+	@echo "    upb          docker compose up -d --build"
+	@echo "    down         docker compose down -v"
+	@echo "    logs         docker compose logs -f"
+	@echo "    ps           docker compose ps"
+	@echo ""
+	@echo "  API Helpers"
+	@echo "    enq [URL=..]     POST /download (default: test URL)"
+	@echo "    stat [JOB=..]    GET /jobs/{id} (default: last enqueued)"
+	@echo ""
+	@echo "  Development (local)"
+	@echo "    install      create .venv, install deps, copy .env"
+	@echo "    lint         ruff (fix), black, mypy"
+	@echo "    test         pytest only"
+	@echo ""
+	@echo "    clean        remove caches and build artifacts"
+	@echo ""
 
-venv:
-	@[ -d .venv ] || ($(UV) venv --python 3.12 && echo "Activate: source .venv/bin/activate")
-
-venv-recreate:
-	$(UV) venv --python 3.12 --clear
-	@echo "Recreated .venv. Activate: source .venv/bin/activate"
-
-install:
-	@[ -d .venv ] || $(UV) venv --python 3.12
-	$(UV) pip install -e '.[dev]'
-	@[ -f .env ] || (cp .env.example .env && echo "Created .env from .env.example")
-
-update: venv
-	$(UV) pip install -U -e '.[dev]'
-
-check:
-	$(BLACK) --check . && $(RUFF) check . && $(MYPY) . && $(PYTEST) -q
-
-check-f:
-	$(BLACK) . && $(RUFF) check --fix . && $(MYPY) . && $(PYTEST) -q
-
-precommit:
-	$(PRECOMMIT) run -a
-
-build:
-	docker compose build
-
+# ─────────────────────────────────────────────────────────────────────────────
+# Docker Compose
+# ─────────────────────────────────────────────────────────────────────────────
 upb:
 	docker compose up -d --build
 
@@ -65,13 +37,40 @@ logs:
 ps:
 	docker compose ps
 
-enqueue:
-	@test -n "$(URL)" || (echo "Usage: make enqueue URL=..." && exit 1)
-	curl -s -X POST 'http://127.0.0.1:8033/download?url=$(URL)' | jq .
+# ─────────────────────────────────────────────────────────────────────────────
+# API Helpers
+# ─────────────────────────────────────────────────────────────────────────────
+# Default test URL
+DEFAULT_URL=https://soundcloud.com/cheetah_33/md_33
 
-status:
-	@test -n "$(JOB)" || (echo "Usage: make status JOB=<job_id>" && exit 1)
-	curl -s 'http://127.0.0.1:8033/jobs/$(JOB)' | jq .
+enq:
+	@$(eval URL ?= $(DEFAULT_URL))
+	@echo "Enqueueing: $(URL)"
+	@curl -s -X POST 'http://127.0.0.1:8033/download?url=$(URL)' | tee .last_response.json | jq .
+	@cat .last_response.json | jq -r '.job_id // empty' > .latest_job_id
+	@rm .last_response.json
+
+stat:
+	@$(eval JOB ?= $(shell cat .latest_job_id 2>/dev/null))
+	@test -n "$(JOB)" || (echo "Usage: make stat JOB=<job_id> (or run 'make enq' first)" && exit 1)
+	@curl -s 'http://127.0.0.1:8033/jobs/$(JOB)' | jq .
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Development (local)
+# ─────────────────────────────────────────────────────────────────────────────
+install:
+	@[ -d .venv ] || uv venv --python 3.12
+	uv pip install -e '.[dev]'
+	@[ -f .env ] || (cp .env.example .env && echo "Created .env from .env.example")
+	@echo "Activate: source .venv/bin/activate"
+
+lint:
+	.venv/bin/ruff check --fix .
+	.venv/bin/black .
+	.venv/bin/mypy .
+
+test:
+	.venv/bin/pytest -q
 
 clean:
 	rm -rf .mypy_cache .pytest_cache .ruff_cache build dist *.egg-info
