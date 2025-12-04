@@ -42,6 +42,7 @@ class YouTubeProvider(ProviderPort):
             "noprogress": True,
             "ignoreerrors": False,
             "nocheckcertificate": True,
+            "force_ipv4": True,
             "outtmpl": outtmpl or "%(title)s.%(ext)s",
             "format": "bestaudio/best",  # Download best audio quality
         }
