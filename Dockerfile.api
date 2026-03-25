@@ -9,7 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN --mount=type=cache,target=/var/cache/apt \
     --mount=type=cache,target=/var/lib/apt/lists \
     apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg curl ca-certificates tzdata
+    && apt-get install -y --no-install-recommends ffmpeg curl ca-certificates tzdata unzip \
+    && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
 
 # Install uv (fast Python package manager)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh \

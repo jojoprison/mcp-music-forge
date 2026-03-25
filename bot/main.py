@@ -1,4 +1,5 @@
 import asyncio
+import html
 import logging
 import sys
 from aiogram import Bot, Dispatcher, F
@@ -86,13 +87,13 @@ async def monitor_job(message: Message, job_id: str, api_base: str):
                             await status_msg.delete()
                         except Exception as send_err:
                             logger.error(f"Error sending file: {send_err}")
-                            await status_msg.edit_text(f"❌ Error sending file: {send_err}")
+                            await status_msg.edit_text(f"❌ Error sending file: {html.escape(str(send_err))}")
                     else:
                          await status_msg.edit_text("❌ Job succeeded, but no file found to send.")
                     return
                     
                 elif status == "failed":
-                    error = data.get("error", "Unknown error")
+                    error = html.escape(data.get("error", "Unknown error"))
                     await status_msg.edit_text(f"❌ Job failed: {error}")
                     return
                 
@@ -142,7 +143,7 @@ async def handle_message(message: Message) -> None:
         await message.answer("❌ Error: Could not connect to the API server.")
     except Exception as e:
         logger.error(f"Error calling API: {e}")
-        await message.answer(f"❌ Error queuing task: {str(e)}")
+        await message.answer(f"❌ Error queuing task: {html.escape(str(e))}")
 
 async def main() -> None:
     token = settings.telegram_bot_token
