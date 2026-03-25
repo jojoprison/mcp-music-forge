@@ -44,7 +44,8 @@ class YouTubeProvider(ProviderPort):
             "nocheckcertificate": True,
             "force_ipv4": True,
             "outtmpl": outtmpl or "%(title)s.%(ext)s",
-            "format": "bestaudio/best",  # Download best audio quality
+            "format": "bestaudio/best",
+            "remote_components": ["ejs:github"],
         }
 
         # If outtmpl provided, set base download dir explicitly
