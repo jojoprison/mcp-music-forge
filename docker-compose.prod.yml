@@ -4,19 +4,16 @@ services:
       context: .
       dockerfile: Dockerfile.api
     restart: unless-stopped
+    network_mode: host
     env_file: .env.prod
     environment:
       - TZ=${TZ:-UTC}
       - STORAGE_DIR=/app/data
       - DATABASE_URL=sqlite:////app/data/db.sqlite3
-      - REDIS_URL=redis://host.docker.internal:6379/5
-      - API_BASE_URL=http://localhost:8033
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - REDIS_URL=redis://127.0.0.1:6379/5
+      - API_BASE_URL=http://127.0.0.1:8033
     volumes:
       - ./data:/app/data
-    ports:
-      - "8033:8033"
     deploy:
       resources:
         limits:
@@ -27,14 +24,13 @@ services:
       context: .
       dockerfile: Dockerfile.api
     restart: unless-stopped
+    network_mode: host
     env_file: .env.prod
     environment:
       - TZ=${TZ:-UTC}
       - STORAGE_DIR=/app/data
       - DATABASE_URL=sqlite:////app/data/db.sqlite3
-      - REDIS_URL=redis://host.docker.internal:6379/5
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - REDIS_URL=redis://127.0.0.1:6379/5
     volumes:
       - ./data:/app/data
     command: ["arq", "workers.tasks.WorkerSettings"]
