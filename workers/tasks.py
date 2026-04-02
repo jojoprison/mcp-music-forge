@@ -45,3 +45,4 @@ class WorkerSettings:  # pragma: no cover - settings container used by arq CLI
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(_settings.redis_url)
+    max_jobs = 1

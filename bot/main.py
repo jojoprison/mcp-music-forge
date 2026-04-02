@@ -1,20 +1,18 @@
+from __future__ import annotations
+
 import asyncio
 import html
 import logging
-import sys
+
+import httpx
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import Message, FSInputFile
 from aiogram.filters import CommandStart
-import httpx
+from aiogram.types import FSInputFile, Message
 
-# We need to add project root to sys.path to import core modules
-import os
-sys.path.append(os.getcwd())
-
-from core.settings import get_settings
 from core.logging import configure_logging
+from core.settings import get_settings
 
 # Configure logging
 configure_logging(logging.INFO)
@@ -126,8 +124,8 @@ async def handle_message(message: Message) -> None:
         return
 
     # Call API to enqueue
-    target_url = "http://api:8033/download"
-    api_base = "http://api:8033"
+    api_base = settings.api_base_url
+    target_url = f"{api_base}/download"
     
     try:
         async with httpx.AsyncClient() as client:

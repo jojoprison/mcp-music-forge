@@ -50,6 +50,9 @@ class AppSettings(BaseSettings):
     # Telegram Bot
     telegram_bot_token: str | None = Field(default=None, alias="TELEGRAM_BOT_TOKEN")
 
+    # Internal API base URL (bot → api). Default for merged process; override in docker-compose
+    api_base_url: str = Field(default="http://localhost:8033", alias="API_BASE_URL")
+
 
 class RuntimeContext(BaseModel):
     settings: AppSettings

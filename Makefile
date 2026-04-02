@@ -4,12 +4,12 @@
 
 help:
 	@echo ""
-	@echo "  Docker Compose (Production / Stable)"
-	@echo "    up           docker compose -f docker-compose.yml up -d"
-	@echo "    upb          docker compose -f docker-compose.yml up -d --build"
-	@echo "    down         docker compose -f docker-compose.yml down -v"
+	@echo "  Docker Compose (Production — 2 containers, host redis)"
+	@echo "    up           docker compose -f docker-compose.prod.yml up -d"
+	@echo "    upb          docker compose -f docker-compose.prod.yml up -d --build"
+	@echo "    down         docker compose -f docker-compose.prod.yml down -v"
 	@echo ""
-	@echo "  Docker Compose (Development with Hot Reload)"
+	@echo "  Docker Compose (Development — 4 containers, hot reload)"
 	@echo "    dup          docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d"
 	@echo "    dupb         docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build"
 	@echo "    ddown        docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v"
@@ -30,18 +30,18 @@ help:
 	@echo ""
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Docker Compose (Base)
+# Docker Compose (Production — 2 containers, host redis, bot inside api)
 # ─────────────────────────────────────────────────────────────────────────────
-COMPOSE_BASE = -f docker-compose.yml
+COMPOSE_PROD = -f docker-compose.prod.yml
 
 up:
-	docker compose $(COMPOSE_BASE) up -d
+	docker compose $(COMPOSE_PROD) up -d
 
 upb:
-	docker compose $(COMPOSE_BASE) up -d --build
+	docker compose $(COMPOSE_PROD) up -d --build
 
 down:
-	docker compose $(COMPOSE_BASE) down -v
+	docker compose $(COMPOSE_PROD) down -v
 
 logs:
 	docker compose logs -f
@@ -50,7 +50,7 @@ ps:
 	docker compose ps
 
 restart:
-	docker compose $(COMPOSE_BASE) restart
+	docker compose $(COMPOSE_PROD) restart
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Docker Compose (Dev - Hot Reload)

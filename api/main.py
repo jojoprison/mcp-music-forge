@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -59,12 +60,36 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             # Observability is optional; continue without failing, but log why
             logging.getLogger(__name__).warning("OTEL setup skipped: %s", e)
+    # Start Telegram bot inline if token is configured
+    bot_task = None
+    if settings.telegram_bot_token:
+        try:
+            from aiogram import Bot
+            from aiogram.client.default import DefaultBotProperties
+            from aiogram.enums import ParseMode
+
+            from bot.main import dp as bot_dp
+
+            tg_bot = Bot(
+                token=settings.telegram_bot_token,
+                default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+            )
+            bot_task = asyncio.create_task(bot_dp.start_polling(tg_bot))
+            logging.getLogger(__name__).info("Telegram bot started inline with API")
+        except Exception as e:
+            logging.getLogger(__name__).warning("Bot startup skipped: %s", e)
+
     # Ensure MCP StreamableHTTP SessionManager is running for mounted /mcp app
-    # This initializes the internal task group required to handle requests
-    # (avoids: RuntimeError "Task group is not initialized.
-    # Make sure to use run().")
     async with mcp.session_manager.run():
         yield
+
+    # Graceful bot shutdown
+    if bot_task and not bot_task.done():
+        bot_task.cancel()
+        try:
+            await bot_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(title="MCP Music Forge", version="0.1.0", lifespan=lifespan)
