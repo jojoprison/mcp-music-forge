@@ -206,3 +206,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+# --- local evac/backup snapshots — never commit (contains .env + DB dumps) ---
+_evac_*/
+*.dump
+*.sql
+*.sql.gz
+*.tar.gz
+*.tgz
+backups/
+celerybeat-schedule.db
+data/jobs/
