@@ -17,8 +17,20 @@ from core.ports.provider_port import ProviderPort
 # Подстрока в тексте ошибки yt-dlp → что сказать пользователю.
 # Порядок значим: первое совпадение выигрывает, поэтому частные случаи
 # стоят выше общих.
-_AUTH_MARKERS = (
+# Бот-челлендж стоит отдельно от настоящей авторизации, и это не
+# придирка: замер 28.08 показал, что одна и та же ссылка в 10:33
+# скачалась, а в 10:58 получила этот отказ. Флагуется наш адрес, а не
+# видео, поэтому отказ ПЛАВАЮЩИЙ и повтор его лечит. Считать его
+# терминальным — значит отдавать пользователю «нужны cookies» там, где
+# помогла бы вторая попытка через минуту.
+_BOT_CHECK_MARKERS = (
     "sign in to confirm you're not a bot",
+    "confirm you're not a bot",
+)
+
+# А это — настоящая авторизация: возраст, приватность, членство. Повтор
+# здесь бесполезен по построению, сколько ни жди.
+_AUTH_MARKERS = (
     "sign in to confirm your age",
     "this video is available to this channel's members",
     "join this channel to get access",
@@ -57,10 +69,19 @@ def classify_ytdlp_error(exc: Exception) -> ProviderError:
     raw = str(exc)
     text = _normalize(raw)
 
+    # Бот-челлендж проверяем первым. Сейчас наборы маркеров не пересекаются,
+    # но если пересекутся — выиграет более частный случай, а не общий.
+    if any(m in text for m in _BOT_CHECK_MARKERS):
+        return TemporaryProviderError(
+            "YouTube принял нас за бота и не отдал видео. Обычно проходит "
+            "со второй попытки — если повторяется, нужен файл cookies.",
+            technical=raw,
+        )
+
     if any(m in text for m in _AUTH_MARKERS):
         return AuthRequiredError(
-            "YouTube отдаёт это видео только авторизованным. "
-            "Нужен файл cookies — без него площадка не пускает.",
+            "YouTube отдаёт это видео только авторизованным: возрастное "
+            "ограничение, приватный доступ или подписка на канал.",
             technical=raw,
         )
 
