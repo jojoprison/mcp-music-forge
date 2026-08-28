@@ -29,6 +29,16 @@ class AppSettings(BaseSettings):
         default=None, alias="SOUNDCLOUD_COOKIE_FILE"
     )
 
+    youtube_cookie_file: Path | None = Field(
+        default=None, alias="YOUTUBE_COOKIE_FILE"
+    )
+
+    # HTTP-сервер proof-of-origin токенов (bgutil). Без токена YouTube отдаёт
+    # 403 на медиапоток. Пусто — плагин берёт свой дефолт 127.0.0.1:4416.
+    youtube_pot_base_url: str | None = Field(
+        default=None, alias="YOUTUBE_POT_BASE_URL"
+    )
+
     # If true, allow stream downloads even when provider marks not downloadable
     allow_stream_downloads: bool = Field(
         default=True, alias="ALLOW_STREAM_DOWNLOADS"
