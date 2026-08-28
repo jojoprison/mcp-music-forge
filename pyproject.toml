@@ -10,7 +10,9 @@ keywords = ["mcp", "soundcloud", "yt-dlp", "audio", "fastapi", "redis", "arq"]
 
 # project dependencies
 dependencies = [
-    "mcp>=1.2.0",
+    # Верхняя граница обязательна: в mcp 2.x FastMCP переименован в MCPServer,
+    # и mcp_music_forge/mcp_app.py на 2.x не импортируется вовсе (API-1).
+    "mcp>=1.2.0,<2",
     "fastapi>=0.110,<1.0.0",
     "uvicorn>=0.30",
     "uvloop>=0.19",

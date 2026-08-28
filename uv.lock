@@ -715,7 +715,7 @@ requires-dist = [
     { name = "httpx", extras = ["http2"], specifier = ">=0.27" },
     { name = "jinja2", specifier = ">=3.1" },
     { name = "loguru", specifier = ">=0.7" },
-    { name = "mcp", specifier = ">=1.2.0" },
+    { name = "mcp", specifier = ">=1.2.0,<2" },
     { name = "mutagen", specifier = ">=1.47" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13" },
     { name = "opentelemetry-distro", marker = "extra == 'otel'", specifier = ">=0.48b0" },
