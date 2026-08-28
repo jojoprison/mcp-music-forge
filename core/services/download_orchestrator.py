@@ -6,16 +6,29 @@ from pathlib import Path
 import httpx
 from tenacity import (
     AsyncRetrying,
-    retry_if_not_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
 
 import transcoder.ffmpeg_cli as ffmpeg_cli
 from core.domain.job import DownloadOptions, Job, JobStatus
+from core.errors import ProviderError
 from core.infra.db import session_scope
 from core.services import provider_registry
 from storage.local_fs import LocalStorage
+
+_log = logging.getLogger(__name__)
+
+# Вынесено в модуль, чтобы тест мог убрать паузы: с настоящими окнами
+# проверка ретраев ждала бы полторы минуты и её бы просто не написали.
+_RETRY_ATTEMPTS = 3
+_RETRY_WAIT = wait_exponential(multiplier=30, min=30, max=120)
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Повторяем только то, что само себя объявило поправимым."""
+    return getattr(exc, "retryable", False) is True
 
 
 async def _download_cover(url: str, dest: Path) -> Path | None:
@@ -57,18 +70,29 @@ async def process_job(job_id: str) -> None:
     # Resolve options
     opts = DownloadOptions.model_validate(options)
 
-    # Download original with retries
+    # Повторяем только то, что повтором и лечится: сеть, лимит частоты, 403
+    # на медиапоток. Требование авторизации и «видео удалено» повтор не
+    # чинит — там это просто задержка перед тем же ответом.
+    # Окно намеренно в минутах, а не в секундах: прежние три попытки
+    # укладывались в 20 секунд, то есть били в одно и то же состояние
+    # блокировки.
     try:
         async for attempt in AsyncRetrying(
-            wait=wait_exponential(multiplier=1, min=1, max=8),
-            stop=stop_after_attempt(3),
-            retry=retry_if_not_exception_type(PermissionError),
+            wait=_RETRY_WAIT,
+            stop=stop_after_attempt(_RETRY_ATTEMPTS),
+            retry=retry_if_exception(_is_retryable),
+            reraise=True,
         ):
             with attempt:
                 original_dir = storage.ensure_subdir(job_id, "original")
                 original_path_str, probe = await provider.download(
                     url, str(original_dir), respect_tou=opts.respect_tou
                 )
+    except ProviderError as e:
+        # Пользователю — человеческий текст, в лог — формулировку yt-dlp.
+        _log.warning("job %s failed: %s", job_id, e.technical)
+        _mark_failed(job_id, e.user_message)
+        return
     except PermissionError as e:
         _mark_failed(job_id, str(e))
         return

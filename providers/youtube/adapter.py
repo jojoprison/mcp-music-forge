@@ -52,21 +52,11 @@ class YouTubeProvider(YtDlpProvider):
         }
 
     async def probe(self, url: str) -> ProbeResult:
-        try:
-            info = await self._extract_info(url, download=False)
-        except Exception:
-            # Приватное/удалённое видео либо отказ площадки — метаданных нет,
-            # значит и качать нечего.
-            return ProbeResult(
-                provider=self.name,
-                can_download=False,
-                normalized_id=None,
-                title=None,
-                artist=None,
-                duration=None,
-                artwork_url=None,
-                reason_if_denied="Could not extract info from YouTube",
-            )
+        # Ошибку не глушим: база уже перевела её в доменную с человеческим
+        # текстом и признаком «имеет ли смысл повторять». Прежняя версия
+        # ловила всё подряд и отдавала «Could not extract info from YouTube» —
+        # под этим текстом три месяца пряталось требование авторизации.
+        info = await self._extract_info(url, download=False)
 
         normalized_id = (
             str(info.get("id")) if info.get("id") is not None else None
