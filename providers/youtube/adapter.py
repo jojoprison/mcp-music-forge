@@ -24,11 +24,13 @@ class YouTubeProvider(YtDlpProvider):
         return get_settings().youtube_cookie_file
 
     def _extra_ydl_opts(self) -> dict[str, Any]:
-        opts: dict[str, Any] = {
-            "force_ipv4": True,
-            # Решатель JS-челленджей: без него YouTube отдаёт «подтвердите,
-            # что вы не бот» ещё на стадии метаданных.
-            "remote_components": ["ejs:github"],
+        # tv_simply первым, и это не косметика: на видео, требующих входа,
+        # клиенты web/mweb/ios/tv получают «подтвердите, что вы не бот», а
+        # android отдаёт форматы без URL (SABR-only). Замер 28.08 на трёх
+        # ссылках владельца: проходит только tv_simply. `default` оставлен
+        # запасным — поломка одного клиента не должна ронять весь провайдер.
+        extractor_args: dict[str, dict[str, list[str]]] = {
+            "youtube": {"player_client": ["tv_simply", "default"]}
         }
 
         # Proof-of-origin токен: YouTube требует его для выдачи медиапотока
@@ -37,11 +39,17 @@ class YouTubeProvider(YtDlpProvider):
         # Пусто — плагин берёт свой дефолт 127.0.0.1:4416.
         pot_base_url = get_settings().youtube_pot_base_url
         if pot_base_url:
-            opts["extractor_args"] = {
-                "youtubepot-bgutilhttp": {"base_url": [pot_base_url]}
+            extractor_args["youtubepot-bgutilhttp"] = {
+                "base_url": [pot_base_url]
             }
 
-        return opts
+        return {
+            "force_ipv4": True,
+            # Решатель JS-челленджей: без него YouTube отдаёт «подтвердите,
+            # что вы не бот» ещё на стадии метаданных.
+            "remote_components": ["ejs:github"],
+            "extractor_args": extractor_args,
+        }
 
     async def probe(self, url: str) -> ProbeResult:
         try:
