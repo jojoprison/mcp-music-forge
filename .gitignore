@@ -216,3 +216,6 @@ _evac_*/
 backups/
 celerybeat-schedule.db
 data/jobs/
+
+# --- воркти Claude Code: рабочие копии репозитория, в индекс не попадают ---
+.claude/worktrees/

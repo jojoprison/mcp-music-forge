@@ -20,7 +20,7 @@
 |---|---|---|
 | `PROV` | [`bugs/providers.md`](bugs/providers.md) | скачивание: `providers/`, yt-dlp, YouTube, SoundCloud |
 | `WRK` | `bugs/worker.md` | arq-воркер, очередь, транскод (`workers/`, `transcoder/`) |
-| `API` | `bugs/api.md` | FastAPI и MCP-слой (`api/`, `mcp_music_forge/`) |
+| `API` | [`bugs/api.md`](bugs/api.md) | FastAPI и MCP-слой (`api/`, `mcp_music_forge/`) |
 | `BOT` | `bugs/bot.md` | телеграм-бот `@yt_sc_mp3_downloader_bot` (`bot/`) |
 | `INF` | `bugs/infra.md` | docker, деплой, сервер `coco`, диск, бэкапы |
 
@@ -36,3 +36,9 @@
   и cookies **уже выкачены**, но карточка открыта: доля отказов на проде не перемерена, а один
   успешный прогон 27.08 уже однажды был принят за доказательство и оказался ложным. Разбор
   альтернатив — [`../research/2026-08-28-youtube-download-libs.md`](../research/2026-08-28-youtube-download-libs.md).
+
+## 🟠 API и MCP
+
+- **[API-1](bugs/api.md#api-1--mcp-слой-не-работает-на-mcp-2x-держимся-пином-2)** — `mcp_app.py`
+  импортирует `FastMCP`, которого нет в mcp 2.x; держимся пином `<2`. Уронило прод при первой
+  пересборке образа 28.08 — вместе с api ложится и телеграм-бот, он в том же процессе.
