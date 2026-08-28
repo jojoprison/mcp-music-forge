@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -155,6 +157,24 @@ class YtDlpProvider(ProviderPort):
     ) -> dict[str, Any]:
         opts = self._build_opts(outtmpl)
 
+        # 🛑 yt-dlp не только читает cookiefile, но и ПИШЕТ jar обратно в тот
+        # же путь. Воркер обрабатывает джобы конкурентно, поэтому несколько
+        # процессов писали бы в один файл: он усыхает, куки теряются, и
+        # авторизация деградирует сама собой. Замер 28.08: 618673 → 616770
+        # байт за десяток загрузок, после чего площадка снова перестала
+        # пускать. Отдаём одноразовую копию, оригинал неприкосновенен.
+        with tempfile.TemporaryDirectory(prefix="ytdlp-cookies-") as tmpdir:
+            source = opts.get("cookiefile")
+            if source:
+                scratch = Path(tmpdir) / "cookies.txt"
+                shutil.copy2(source, scratch)
+                opts["cookiefile"] = str(scratch)
+
+            return await self._run_ytdlp(url, download, opts)
+
+    async def _run_ytdlp(
+        self, url: str, download: bool, opts: dict[str, Any]
+    ) -> dict[str, Any]:
         def _run() -> dict[str, Any]:
             with ytdlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(url, download=download)
