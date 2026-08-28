@@ -66,9 +66,48 @@ def _normalize(text: str) -> str:
     return text.lower().replace("’", "'").replace("‘", "'")
 
 
-def classify_ytdlp_error(exc: Exception) -> ProviderError:
+class YtdlpLogger:
+    """Собирает предупреждения yt-dlp.
+
+    🛑 Часть диагностики живёт ТОЛЬКО в них. Пример — «cookies are no longer
+    valid»: в текст исключения оно не попадает вовсе, и без этого канала
+    протухший файл cookies неотличим от обычного бот-челленджа. Разница
+    существенная: во втором случае помогает повтор, в первом — только новый
+    файл, и пользователю надо сказать разное.
+    """
+
+    def __init__(self, sink: list[str]) -> None:
+        self._sink = sink
+
+    def debug(self, msg: str) -> None:  # pragma: no cover - шум yt-dlp
+        pass
+
+    def info(self, msg: str) -> None:  # pragma: no cover - шум yt-dlp
+        pass
+
+    def warning(self, msg: str) -> None:
+        self._sink.append(msg)
+
+    def error(self, msg: str) -> None:  # pragma: no cover - придёт исключением
+        pass
+
+
+def classify_ytdlp_error(
+    exc: Exception, warnings: tuple[str, ...] | list[str] = ()
+) -> ProviderError:
     """Переводит ошибку yt-dlp в доменную — с текстом для человека."""
     raw = str(exc)
+
+    # Предупреждения смотрим отдельным проходом, а не подмешиваем в общий
+    # текст: иначе чужое предупреждение начнёт влиять на классификацию
+    # ошибки, к которой оно не относится.
+    if "cookies are no longer valid" in _normalize(" ".join(warnings)):
+        return AuthRequiredError(
+            "Файл cookies больше не действителен — браузер сменил сессию. "
+            "Нужно выгрузить его заново из приватного окна.",
+            technical=f"{raw} | warnings: {' '.join(warnings)}",
+        )
+
     text = _normalize(raw)
 
     # Бот-челлендж проверяем первым. Сейчас наборы маркеров не пересекаются,
@@ -175,6 +214,9 @@ class YtDlpProvider(ProviderPort):
     async def _run_ytdlp(
         self, url: str, download: bool, opts: dict[str, Any]
     ) -> dict[str, Any]:
+        warnings: list[str] = []
+        opts = {**opts, "logger": YtdlpLogger(warnings)}
+
         def _run() -> dict[str, Any]:
             with ytdlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(url, download=download)
@@ -188,7 +230,7 @@ class YtDlpProvider(ProviderPort):
             # доменную. Раньше её глотал probe и наружу уходило
             # «Could not extract info from YouTube» — по такому тексту нельзя
             # ни понять причину, ни решить, есть ли смысл повторять.
-            raise classify_ytdlp_error(exc) from exc
+            raise classify_ytdlp_error(exc, warnings) from exc
 
     def _downloaded_path(self, info: dict[str, Any], dest_dir: str) -> str:
         """Куда yt-dlp реально положил файл.

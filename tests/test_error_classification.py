@@ -98,6 +98,59 @@ def test_bot_check_is_retried_but_real_auth_is_not() -> None:
     assert age_gate.retryable is False
 
 
+_ROTATED_COOKIES_WARNING = (
+    "The provided YouTube account cookies are no longer valid. They have "
+    "likely been rotated in the browser as a security measure."
+)
+
+
+def test_rotated_cookies_are_told_apart_from_plain_bot_check() -> None:
+    # Один и тот же текст ошибки, но с предупреждением и без — это разные
+    # ситуации: протухший файл повтором не лечится, его надо заменить.
+    # 🛑 Предупреждение живёт ТОЛЬКО в логе yt-dlp, в исключение не попадает.
+    exc = Exception("ERROR: [youtube] x: Sign in to confirm you’re not a bot.")
+
+    without = classify_ytdlp_error(exc)
+    with_warning = classify_ytdlp_error(exc, [_ROTATED_COOKIES_WARNING])
+
+    assert type(without) is TemporaryProviderError
+    assert type(with_warning) is AuthRequiredError
+    assert "заново" in with_warning.user_message
+    # Формулировка площадки должна доехать до логов целиком.
+    assert "rotated" in with_warning.technical
+
+
+@pytest.mark.asyncio
+async def test_warnings_from_ytdlp_reach_the_classifier(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Стережёт сам шов: yt-dlp пишет предупреждения в переданный logger,
+    # и без подключённого logger'а канал диагностики просто отсутствует.
+    from providers import ytdlp_base
+    from providers.youtube.adapter import YouTubeProvider
+
+    class _FakeYoutubeDL:
+        def __init__(self, opts: dict) -> None:
+            self._logger = opts["logger"]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc_info):
+            return False
+
+        def extract_info(self, url: str, download: bool):
+            self._logger.warning(_ROTATED_COOKIES_WARNING)
+            raise RuntimeError("Sign in to confirm you’re not a bot")
+
+    monkeypatch.setattr(ytdlp_base.ytdlp, "YoutubeDL", _FakeYoutubeDL)
+
+    with pytest.raises(AuthRequiredError) as caught:
+        await YouTubeProvider()._extract_info("https://youtu.be/x", False)
+
+    assert "заново" in caught.value.user_message
+
+
 class _FailingProvider(ProviderPort):
     """Падает заданной ошибкой и считает, сколько раз его дёрнули."""
 
