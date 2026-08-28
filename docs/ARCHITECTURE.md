@@ -22,14 +22,25 @@
     - `infra/db.py` — SQLModel/SQLAlchemy engine, `session_scope()`, создание таблиц.
     - `logging.py` — structlog JSON-логи.
     - `ports/` — `ProviderPort`, `StoragePort`.
+    - `errors.py` — доменные отказы площадок: `AuthRequiredError`,
+      `MediaUnavailableError`, `TemporaryProviderError`. Несут текст для
+      пользователя и признак `retryable`, по которому оркестратор решает,
+      повторять ли попытку.
     - `services/`:
         - `provider_registry.py` — регистрация/детект провайдеров.
         - `download_orchestrator.py` — оркестровка: скачивание, транскод, теги, статусы.
         - `queue.py` — постановка задач в ARQ/Redis.
 
 - **`providers/`** — адаптеры источников:
-    - `soundcloud_ytdlp/adapter.py` — SoundCloud на базе `yt-dlp`, принудительная проверка ToU (`downloadable`/
-      `download_url`).
+    - `ytdlp_base.py` — общая обвязка yt-dlp: сборка опций, запуск в потоке,
+      разбор пути к скачанному файлу, матчинг хостов и перевод ошибок площадки
+      в доменные (`classify_ytdlp_error`). Адаптеры держат только своё.
+    - `soundcloud_ytdlp/adapter.py` — SoundCloud, принудительная проверка ToU (`downloadable`/
+      `download_url`), cookies через `SOUNDCLOUD_COOKIE_FILE`.
+    - `youtube/adapter.py` — YouTube: клиент плеера `tv_simply` (остальные
+      упираются в бот-челлендж, `android` отдаёт форматы без URL), решатель
+      JS-челленджей через deno, proof-of-origin токены от sidecar `bgutil`,
+      cookies через `YOUTUBE_COOKIE_FILE`.
 
 - **`storage/`** — хранилища артефактов:
     - `local_fs.py` — локальная ФС с layout: `data/jobs/<job_id>/{original,final}`.
