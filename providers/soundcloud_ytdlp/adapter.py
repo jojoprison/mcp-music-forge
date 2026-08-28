@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
-import yt_dlp as ytdlp
-from anyio import to_thread
-
-from core.ports.provider_port import ProbeResult, ProviderPort
+from core.ports.provider_port import ProbeResult
 from core.settings import get_settings
+from providers.ytdlp_base import YtDlpProvider
 
 _SOUNDCLOUD_HOSTS = (
     "soundcloud.com",
@@ -17,68 +13,25 @@ _SOUNDCLOUD_HOSTS = (
 )
 
 
-@dataclass
-class _DLResult:
-    filepath: str
-    info: dict[str, Any]
-
-
-class SoundCloudYtDlpProvider(ProviderPort):
+class SoundCloudYtDlpProvider(YtDlpProvider):
     name = "soundcloud"
+    hosts = _SOUNDCLOUD_HOSTS
+    fallback_ext = "mp3"
 
-    def can_handle(self, url: str) -> bool:
-        return any(h in url for h in _SOUNDCLOUD_HOSTS)
-
-    async def _extract_info(
-        self, url: str, download: bool, outtmpl: str | None = None
-    ) -> dict[str, Any]:
-        settings = get_settings()
-        ydl_opts: dict[str, Any] = {
-            "quiet": True,
-            "noprogress": True,
-            "ignoreerrors": False,
-            "nocheckcertificate": True,
-            "outtmpl": outtmpl or "%(title)s.%(ext)s",
-            "format": "bestaudio/best",
-        }
-        # Use cookie file only if it points to a regular file (not directory)
-        cookie_path = settings.soundcloud_cookie_file
-        if cookie_path:
-            p = Path(cookie_path)
-            if p.is_file():
-                ydl_opts["cookiefile"] = str(p)
-        # If outtmpl provided, set base download dir explicitly
-        # to avoid cwd='.' issues
-        if outtmpl:
-            try:
-                base_dir = str(Path(outtmpl).parent)
-                if base_dir and base_dir != ".":
-                    ydl_opts["paths"] = {"home": base_dir}
-            except Exception:
-                print("lol")
-
-        def _run() -> dict[str, Any]:
-            with ytdlp.YoutubeDL(ydl_opts) as ydl:
-                return ydl.extract_info(url, download=download)
-
-        return await to_thread.run_sync(_run)
+    def _cookie_file(self) -> Path | None:
+        return get_settings().soundcloud_cookie_file
 
     async def probe(self, url: str) -> ProbeResult:
         info = await self._extract_info(url, download=False)
-        # Only allow if uploader marked track as downloadable to respect ToU
+        # Качаем только то, что автор сам пометил доступным — этого требует ToU.
         downloadable = bool(
             info.get("downloadable") or info.get("download_url")
         )
         normalized_id = (
             str(info.get("id")) if info.get("id") is not None else None
         )
-        title = info.get("title")
-        artist = info.get("uploader") or info.get("artist")
         _dur = info.get("duration")
-        if isinstance(_dur, int | float | str):
-            duration = int(_dur)
-        else:
-            duration = None
+        duration = int(_dur) if isinstance(_dur, int | float | str) else None
         artwork_url = (
             info.get("thumbnail") or info.get("thumbnails", [{}])[-1].get("url")
             if info.get("thumbnails")
@@ -93,8 +46,8 @@ class SoundCloudYtDlpProvider(ProviderPort):
             provider=self.name,
             can_download=downloadable,
             normalized_id=normalized_id,
-            title=title,
-            artist=artist,
+            title=info.get("title"),
+            artist=info.get("uploader") or info.get("artist"),
             duration=duration,
             artwork_url=artwork_url,
             reason_if_denied=reason,
@@ -104,7 +57,7 @@ class SoundCloudYtDlpProvider(ProviderPort):
         self, url: str, dest_dir: str, *, respect_tou: bool = True
     ) -> tuple[str, ProbeResult]:
         Path(dest_dir).mkdir(parents=True, exist_ok=True)
-        # Enforce can_download prior to downloading to respect ToU
+
         probe = await self.probe(url)
         if respect_tou and not probe.can_download:
             raise PermissionError(
@@ -113,18 +66,5 @@ class SoundCloudYtDlpProvider(ProviderPort):
 
         outtmpl = str(Path(dest_dir) / "%(title)s.%(ext)s")
         info = await self._extract_info(url, download=True, outtmpl=outtmpl)
-        # Construct filepath like yt-dlp would have produced
-        title = info.get("title") or info.get("id")
-        ext = (
-            info.get("ext")
-            or (
-                info.get("requested_downloads", [{}])[0].get("ext")
-                if info.get("requested_downloads")
-                else None
-            )
-            or "mp3"
-        )
-        filename = f"{title}.{ext}"
-        filepath = str(Path(dest_dir) / filename)
 
-        return filepath, probe
+        return self._downloaded_path(info, dest_dir), probe

@@ -18,7 +18,10 @@ dependencies = [
     "pydantic-settings>=2.4",
     "redis>=5.0",
     "arq>=0.26,<1.0",
-    "yt-dlp>=2024.07.01",
+    "yt-dlp>=2025.05.22",
+    # Плагин yt-dlp: выдаёт proof-of-origin токены, без которых YouTube
+    # отвечает 403 на медиапоток. Подхватывается yt-dlp автоматически.
+    "bgutil-ytdlp-pot-provider>=1.3.2",
     "mutagen>=1.47",
     "structlog>=24.1",
     "loguru>=0.7",
