@@ -118,6 +118,34 @@ def test_downloaded_path_uses_provider_fallback_ext(tmp_path: Path) -> None:
     ).endswith("Track.mp3")
 
 
+@pytest.mark.asyncio
+async def test_ytdlp_gets_a_copy_and_never_the_original_cookie_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # 🛑 yt-dlp пишет cookie jar ОБРАТНО в переданный путь. Джобы идут
+    # конкурентно, поэтому оригинал должен оставаться неприкосновенным —
+    # иначе файл усыхает и авторизация деградирует сама собой.
+    original = tmp_path / "youtube_cookies.txt"
+    original.write_text("# Netscape HTTP Cookie File\noriginal\n", "utf-8")
+    monkeypatch.setenv("YOUTUBE_COOKIE_FILE", str(original))
+    get_settings.cache_clear()
+
+    seen: dict[str, str] = {}
+
+    async def fake_run(self, url, download, opts):
+        seen["cookiefile"] = opts["cookiefile"]
+        # Имитируем ровно то, что делает yt-dlp: переписывает файл.
+        Path(opts["cookiefile"]).write_text("обглодано\n", "utf-8")
+        return {"id": "x"}
+
+    monkeypatch.setattr(YouTubeProvider, "_run_ytdlp", fake_run)
+
+    await YouTubeProvider()._extract_info("https://youtu.be/x", download=False)
+
+    assert seen["cookiefile"] != str(original)
+    assert original.read_text("utf-8").endswith("original\n")
+
+
 def test_can_handle_matches_own_hosts_only() -> None:
     yt, sc = YouTubeProvider(), SoundCloudYtDlpProvider()
     assert yt.can_handle("https://youtu.be/abc") is True
