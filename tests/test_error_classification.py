@@ -26,12 +26,20 @@ from providers.ytdlp_base import classify_ytdlp_error
         # 🛑 Именно в этой форме yt-dlp и печатает — с ТИПОГРАФСКИМ
         # апострофом. Матч по ASCII-апострофу не сработал бы, и самая
         # частая ошибка уехала бы в «неизвестные».
+        #
+        # И она ПОПРАВИМАЯ: замер 28.08 — одна ссылка в 10:33 скачалась,
+        # в 10:58 получила этот отказ. Флагуется адрес, а не видео.
         (
             "ERROR: [youtube] abc: Sign in to confirm you’re not a bot.",
-            AuthRequiredError,
+            TemporaryProviderError,
         ),
         (
             "ERROR: [youtube] abc: Sign in to confirm you're not a bot.",
+            TemporaryProviderError,
+        ),
+        # А вот это — настоящая авторизация, её повтор не лечит.
+        (
+            "ERROR: [youtube] abc: Sign in to confirm your age",
             AuthRequiredError,
         ),
         ("ERROR: [youtube] abc: Private video. Sign in", AuthRequiredError),
@@ -74,6 +82,20 @@ def test_technical_text_is_preserved_for_logs() -> None:
     assert err.technical == raw
     assert "cookies" in err.user_message
     assert "Sign in" not in err.user_message
+
+
+def test_bot_check_is_retried_but_real_auth_is_not() -> None:
+    # Ядро различия: за бота нас принимают временно (флаг на адресе),
+    # а возрастное ограничение повтором не снимается никогда.
+    bot_check = classify_ytdlp_error(
+        Exception("Sign in to confirm you’re not a bot")
+    )
+    age_gate = classify_ytdlp_error(
+        Exception("Sign in to confirm your age")
+    )
+
+    assert bot_check.retryable is True
+    assert age_gate.retryable is False
 
 
 class _FailingProvider(ProviderPort):
