@@ -47,15 +47,26 @@ def test_pot_provider_url_reaches_extractor_args(
     monkeypatch.setenv("YOUTUBE_POT_BASE_URL", "http://127.0.0.1:4416")
     get_settings.cache_clear()
 
-    opts = YouTubeProvider()._build_opts(None)
-    assert opts["extractor_args"] == {
-        "youtubepot-bgutilhttp": {"base_url": ["http://127.0.0.1:4416"]}
+    args = YouTubeProvider()._build_opts(None)["extractor_args"]
+    assert args["youtubepot-bgutilhttp"] == {
+        "base_url": ["http://127.0.0.1:4416"]
     }
 
 
-def test_no_extractor_args_without_pot_url() -> None:
+def test_no_pot_key_without_url() -> None:
     # Пусто — плагин сам идёт на свой дефолтный адрес, ключ навязывать нельзя.
-    assert "extractor_args" not in YouTubeProvider()._build_opts(None)
+    args = YouTubeProvider()._build_opts(None)["extractor_args"]
+    assert "youtubepot-bgutilhttp" not in args
+
+
+def test_tv_simply_client_goes_first() -> None:
+    # Порядок несёт смысл: на видео, требующих входа, остальные клиенты
+    # получают бот-челлендж, а android отдаёт форматы без URL (SABR-only).
+    clients = YouTubeProvider()._build_opts(None)["extractor_args"]["youtube"][
+        "player_client"
+    ]
+    assert clients[0] == "tv_simply"
+    assert "default" in clients
 
 
 def test_youtube_keeps_js_challenge_solver() -> None:
