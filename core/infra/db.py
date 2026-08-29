@@ -56,5 +56,12 @@ def session_scope() -> Iterator[Session]:
 
 
 def create_db_and_tables() -> None:
+    # 🛑 `create_all` создаёт только те таблицы, чьи модели УЖЕ импортированы —
+    # он читает `SQLModel.metadata`, а она наполняется импортом. Модель, не
+    # импортированную в этой цепочке, он молча пропустит, и таблицы на проде
+    # просто не будет. Импорт здесь, а не у вызывающих: иначе один забытый
+    # импорт в одном из входов (api / worker / тесты) даёт разную схему.
+    from core.domain import delivery, job  # noqa: F401
+
     engine = get_engine()
     SQLModel.metadata.create_all(engine)

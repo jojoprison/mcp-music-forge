@@ -133,7 +133,26 @@ async def handle_message(message: Message) -> None:
             response.raise_for_status()
             data = response.json()
             job_id = data.get("job_id")
-            
+
+            # Запомнить, кому отдать результат: если сервис ляжет между
+            # постановкой и выдачей, поллер ниже умрёт вместе с процессом, а
+            # долг перед человеком останется записанным — воркер досылает
+            # такие сам, когда площадка оживёт.
+            try:
+                await client.post(
+                    f"{api_base}/deliveries",
+                    params={
+                        "job_id": job_id,
+                        "chat_id": message.chat.id,
+                        "message_id": message.message_id,
+                    },
+                    timeout=10.0,
+                )
+            except Exception as reg_err:  # noqa: BLE001
+                # Не блокируем выдачу файла: досыл — подстраховка, а не
+                # обязательный шаг основного пути.
+                logger.warning(f"Could not register delivery: {reg_err}")
+
             # Start monitoring task
             asyncio.create_task(monitor_job(message, job_id, api_base))
             
