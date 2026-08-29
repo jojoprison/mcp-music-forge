@@ -13,6 +13,10 @@ services:
       - REDIS_URL=redis://127.0.0.1:6379/5
       - YOUTUBE_POT_BASE_URL=http://127.0.0.1:4416
       - API_BASE_URL=http://127.0.0.1:8033
+      # 🛑 Только loopback: /admin у sqladmin БЕЗ пароля, а /download
+      # без аутентификации. С 0.0.0.0 это открытая панель в интернете.
+      # Доступ к админке — ssh-туннелем, см. docs/BUILD_RUN_DEPLOY.md.
+      - API_HOST=127.0.0.1
     volumes:
       - ./data:/app/data
     deploy:

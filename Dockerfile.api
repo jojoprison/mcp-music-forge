@@ -30,4 +30,9 @@ COPY . .
 
 EXPOSE 8033
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8033"]
+# Хост берём из окружения. Дефолт 0.0.0.0 нужен для bridge-сети (dev):
+# там 127.0.0.1 внутри контейнера недостижим снаружи даже через ports.
+# На проде (network_mode: host) выставляется API_HOST=127.0.0.1 — там
+# loopback общий с хостом, и это закрывает порт от интернета.
+# exec обязателен: без него uvicorn не PID 1 и не получает SIGTERM.
+CMD ["sh", "-c", "exec uvicorn api.main:app --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8033}"]
