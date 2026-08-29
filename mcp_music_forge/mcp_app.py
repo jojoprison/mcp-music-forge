@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from core.infra.db import create_db_and_tables
 from core.logging import configure_logging
@@ -17,7 +17,7 @@ class LifespanContext:
 
 
 @asynccontextmanager
-async def lifespan(_: FastMCP) -> AsyncIterator[LifespanContext]:
+async def lifespan(_: MCPServer) -> AsyncIterator[LifespanContext]:
     settings = get_settings()
     # Init logging and DB
     configure_logging()
@@ -25,13 +25,12 @@ async def lifespan(_: FastMCP) -> AsyncIterator[LifespanContext]:
     yield LifespanContext(settings=settings)
 
 
-mcp = FastMCP(
-    "mcp-music-forge",
-    lifespan=lifespan,
-    # Important when mounting under /mcp in FastAPI to avoid double prefix
-    streamable_http_path="/",
-    stateless_http=True,
-)
+# 🛑 В mcp 2.x транспортные параметры переехали из конструктора в
+# `streamable_http_app()`: `streamable_http_path` и `stateless_http` здесь
+# больше не принимаются. Их задаёт тот, кто монтирует приложение —
+# см. `api/main.py`. Пропустить это молча нельзя: без них путь удвоится
+# (`/mcp/mcp`), а сессии станут stateful.
+mcp = MCPServer("mcp-music-forge", lifespan=lifespan)
 
 # Import side-effects: tool and resource registrations
 # isort: off
