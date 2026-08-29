@@ -133,6 +133,23 @@ def test_exhausted_delivery_does_not_hold_files() -> None:
     assert not d.exists()
 
 
+def test_succeeded_job_with_open_row_does_not_hold_files() -> None:
+    # 🛑 Боевой случай, которого не было в первой редакции фикстур: бот отдал
+    # файл сразу, джоба осталась succeeded, а строка доставки так и стоит с
+    # delivered_at IS NULL — её закрывает только досыл, а он на обычном пути
+    # не участвует. Замер на проде 29.08: ровно 4 таких каталога держались
+    # вечно, и доля росла бы с каждой успешной выдачей, пока чистка не
+    # перестала бы чистить вовсе.
+    d = _job_dir("shipped")
+    _job("shipped", days_ago=90, status=JobStatus.succeeded.value)
+    _delivery("shipped")
+
+    removed, _ = retention.sweep_old_jobs(now=NOW)
+
+    assert removed == 1
+    assert not d.exists()
+
+
 def test_disabled_retention_removes_nothing() -> None:
     get_settings().jobs_retention_days = 0
     d = _job_dir("old")

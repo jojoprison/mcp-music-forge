@@ -5,33 +5,26 @@ import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from core.domain.delivery import Delivery
 from core.domain.job import Job
 from core.infra.db import session_scope
-from core.services.redelivery import MAX_ATTEMPTS
+from core.services.redelivery import pending_job_ids
 from core.settings import get_settings
 
 _log = logging.getLogger(__name__)
 
 
 def _waiting_job_ids() -> set[str]:
-    """Джобы, чей файл ещё кому-то должны.
+    """Джобы, чей файл досыл ещё собирается отдать.
 
-    Тот же предикат, по которому досыл выбирает работу, — намеренно, чтобы
-    два механизма не разошлись во мнении. Разойдись они, чистка снесла бы
-    файл ровно у той джобы, которую досыл собирается отдать.
+    🛑 Не «повторить условие досыла», а ВЫЗВАТЬ его: первая редакция
+    переписала предикат своими словами и потеряла третье условие
+    (`job.status == failed`). Тихая цена — обычная успешная выдача бота
+    оставляет строку с `delivered_at IS NULL` навсегда (закрывать её на этом
+    пути некому), и такой каталог не удалялся бы НИКОГДА. Замер на проде
+    29.08: 4 каталога из 121 уже держались так, и доля росла бы с каждой
+    выдачей, пока чистка не перестала бы чистить вовсе.
     """
-    with session_scope() as s:
-        rows = (
-            s.query(Delivery.job_id)
-            .filter(
-                Delivery.delivered_at.is_(None),
-                Delivery.attempts < MAX_ATTEMPTS,
-            )
-            .distinct()
-            .all()
-        )
-    return {r[0] for r in rows}
+    return set(pending_job_ids())
 
 
 def _last_activity(job_id: str, job_dir: Path) -> datetime:
