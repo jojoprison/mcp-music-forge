@@ -21,6 +21,11 @@ class AppSettings(BaseSettings):
 
     storage_dir: Path = Field(default=Path("data"), alias="STORAGE_DIR")
 
+    # Сколько дней держать каталог джобы. 0 и меньше — не чистить вовсе.
+    # 30 выбрано как «повторная ссылка в пределах месяца отдаётся с диска»:
+    # дальше дешевле скачать заново, чем хранить.
+    jobs_retention_days: int = Field(default=30, alias="JOBS_RETENTION_DAYS")
+
     database_url: str = Field(
         default="sqlite:///data/db.sqlite3", alias="DATABASE_URL"
     )
