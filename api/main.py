@@ -10,9 +10,8 @@ from fastapi.responses import FileResponse, HTMLResponse
 from markupsafe import Markup
 from sqladmin import Admin, ModelView
 
-from core.domain.delivery import Delivery
 from core.domain.job import Job
-from core.infra.db import create_db_and_tables, get_engine, session_scope
+from core.infra.db import create_db_and_tables, get_engine
 from core.logging import configure_logging
 from core.settings import get_settings
 from mcp_music_forge.mcp_app import mcp
@@ -261,33 +260,6 @@ async def api_enqueue(
         return await enqueue_download(url, options)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=str(e)) from e
-
-
-@app.post("/deliveries")
-async def api_register_delivery(
-    job_id: str, chat_id: int, message_id: int | None = None
-) -> dict[str, str]:
-    """Запоминает, кому отдать результат этой джобы.
-
-    Регистрируется в момент постановки, а не при отправке: если сервис упадёт
-    между постановкой и выдачей — а это ровно тот случай, ради которого досыл
-    и существует, — записывать будет уже некому.
-    """
-    with session_scope() as s:
-        # Повторное сообщение той же ссылки не должно плодить дубли: файл
-        # придёт человеку дважды.
-        existing = (
-            s.query(Delivery)
-            .filter_by(job_id=job_id, chat_id=chat_id, message_id=message_id)
-            .first()
-        )
-        if existing:
-            return {"delivery_id": existing.id}
-
-        row = Delivery(job_id=job_id, chat_id=chat_id, message_id=message_id)
-        s.add(row)
-        s.flush()
-        return {"delivery_id": row.id}
 
 
 @app.get("/jobs/{job_id}", response_model=GetJobStatusResult)

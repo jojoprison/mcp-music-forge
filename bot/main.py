@@ -12,6 +12,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import FSInputFile, Message
 
 from core.logging import configure_logging
+from core.services.redelivery import register_delivery
 from core.settings import get_settings
 
 # Configure logging
@@ -138,15 +139,16 @@ async def handle_message(message: Message) -> None:
             # постановкой и выдачей, поллер ниже умрёт вместе с процессом, а
             # долг перед человеком останется записанным — воркер досылает
             # такие сам, когда площадка оживёт.
+            #
+            # 🛑 Прямой вызов, а не HTTP: бот поллится ВНУТРИ процесса api,
+            # ходить по сети к самому себе незачем. Первая редакция делала
+            # это эндпоинтом — и он принимал произвольный chat_id без
+            # аутентификации на порту, открытом наружу.
             try:
-                await client.post(
-                    f"{api_base}/deliveries",
-                    params={
-                        "job_id": job_id,
-                        "chat_id": message.chat.id,
-                        "message_id": message.message_id,
-                    },
-                    timeout=10.0,
+                register_delivery(
+                    job_id=job_id,
+                    chat_id=message.chat.id,
+                    message_id=message.message_id,
                 )
             except Exception as reg_err:  # noqa: BLE001
                 # Не блокируем выдачу файла: досыл — подстраховка, а не
