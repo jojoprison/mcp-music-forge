@@ -27,8 +27,15 @@ class YouTubeProvider(YtDlpProvider):
         # tv_simply первым, и это не косметика: на видео, требующих входа,
         # клиенты web/mweb/ios/tv получают «подтвердите, что вы не бот», а
         # android отдаёт форматы без URL (SABR-only). Замер 28.08 на трёх
-        # ссылках владельца: проходит только tv_simply. `default` оставлен
-        # запасным — поломка одного клиента не должна ронять весь провайдер.
+        # ссылках владельца: проходит только tv_simply.
+        #
+        # 🛑 `default` здесь НЕ запасной вариант и удалять его нельзя:
+        # tv_simply не поддерживает cookies, и при заданном cookiefile
+        # yt-dlp его молча пропускает («Skipping client "tv_simply" since
+        # it does not support cookies»). Останется он один — падает
+        # «Requested format is not available». То есть список покрывает два
+        # непересекающихся режима: без cookies работает tv_simply, с
+        # cookies — default. Замер 29.08: 18 загрузок подряд, 0 отказов.
         extractor_args: dict[str, dict[str, list[str]]] = {
             "youtube": {"player_client": ["tv_simply", "default"]}
         }
