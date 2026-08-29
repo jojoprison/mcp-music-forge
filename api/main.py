@@ -158,7 +158,13 @@ app.add_middleware(
 )
 
 # Mount MCP Streamable HTTP under /mcp
-app.mount("/mcp", mcp.streamable_http_app())
+# Транспортные параметры задаются здесь, а не в конструкторе MCPServer
+# (mcp 2.x). `streamable_http_path="/"` — иначе путь удвоится в `/mcp/mcp`,
+# потому что префикс уже даёт mount.
+app.mount(
+    "/mcp",
+    mcp.streamable_http_app(streamable_http_path="/", stateless_http=True),
+)
 
 
 class JobAdmin(ModelView, model=Job):
