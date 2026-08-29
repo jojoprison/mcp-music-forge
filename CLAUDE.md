@@ -32,7 +32,10 @@ docker compose -f docker-compose.prod.yml up -d --build api worker pot-provider
 `core/services/redelivery.py` + cron в воркере (`workers/tasks.py`, `minute=17`): если джоба упала, а
 пользователь ждал, файл уезжает ему **реплаем на исходное сообщение** после починки. Ждущие — таблица
 `delivery` (одна джоба, много ждущих: джобы дедуплицируются по фингерпринту).
-🛑 Отсюда запрет на агрессивную чистку `data/jobs/*/original/` — досыл берёт файл с диска (INF-1).
+Досыл берёт готовый файл из `final/`; `original/` держит MCP-ресурс
+`music-forge://jobs/{id}/original/{name}`. Поэтому чистка (`core/services/retention.py`, ночной
+cron) сносит каталог джобы **целиком** и только когда ему больше `JOBS_RETENTION_DAYS` (30) и
+никто не ждёт файл — половинчатая чистка оставила бы живые ссылки с 404.
 
 ## Хранилище
 Сгенерированные джобы — в `./data/jobs/`. Фотки/медиа проекта — в Cloudflare R2 (аккаунт-уровень).

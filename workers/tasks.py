@@ -10,6 +10,7 @@ from core.domain.job import Job, JobStatus
 from core.infra.db import create_db_and_tables, session_scope
 from core.services.download_orchestrator import process_job
 from core.services.redelivery import redeliver_pending
+from core.services.retention import sweep_old_jobs
 from core.settings import get_settings
 
 
@@ -52,6 +53,19 @@ async def redeliver(ctx: Any) -> None:
         logging.getLogger(__name__).info("redelivered %s file(s)", sent)
 
 
+async def cleanup_storage(ctx: Any) -> None:
+    """Удаляет каталоги джоб старше срока хранения (INF-1).
+
+    Ждущих досыла чистка не трогает, поэтому порядок с досылом не важен:
+    пересечься они могут только на джобе, которую досыл уже закрыл.
+    """
+    removed, freed = sweep_old_jobs()
+    if removed:
+        logging.getLogger(__name__).info(
+            "cleaned %s job dir(s), freed %.1f MB", removed, freed / 1048576
+        )
+
+
 # Resolve Redis settings from env via our settings provider
 _settings = get_settings()
 
@@ -61,7 +75,12 @@ class WorkerSettings:  # pragma: no cover - settings container used by arq CLI
     # Раз в час: чаще смысла нет (окно блокировки у площадки — часы), реже
     # человек ждёт дольше необходимого. Минута не нулевая, чтобы не сходиться
     # с любыми другими часовыми задачами.
-    cron_jobs = [cron(redeliver, minute=17)]
+    # Ночью и раз в сутки: чистка сканирует весь каталог, а её результат
+    # не нужен никому срочно.
+    cron_jobs = [
+        cron(redeliver, minute=17),
+        cron(cleanup_storage, hour=4, minute=41),
+    ]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(_settings.redis_url)
