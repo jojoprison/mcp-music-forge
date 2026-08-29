@@ -66,6 +66,10 @@ def test_tv_simply_client_goes_first() -> None:
         "player_client"
     ]
     assert clients[0] == "tv_simply"
+    # 🛑 `default` обязателен, а не «на всякий случай»: tv_simply не умеет
+    # cookies, и при заданном cookiefile yt-dlp пропускает его молча. Убрать
+    # default — значит сломать ровно тот режим, ради которого cookies и есть
+    # («Requested format is not available», замер 29.08).
     assert "default" in clients
 
 
