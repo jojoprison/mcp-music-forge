@@ -94,6 +94,34 @@ def test_create_db_and_tables_creates_delivery_table(tmp_path: Path) -> None:
     assert "job" in proc.stdout, proc.stdout
 
 
+def test_no_http_endpoint_can_register_a_delivery() -> None:
+    # 🛑 Регистрация НЕ должна быть выставлена наружу. api слушает
+    # 0.0.0.0:8033 без аутентификации, поэтому эндпоинт с параметром chat_id
+    # позволял кому угодно заставить бота слать файлы чужим людям. Бот живёт
+    # внутри того же процесса — HTTP тут не нужен вовсе.
+    from api.main import app
+
+    paths = {route.path for route in app.routes}
+
+    assert "/deliveries" not in paths
+    # Позитивный контроль: маршруты вообще читаются этим способом.
+    assert "/health" in paths
+
+
+def test_register_delivery_is_idempotent_for_the_same_message() -> None:
+    # Повтор той же ссылки тем же сообщением не должен слать файл дважды.
+    _job("job-1", JobStatus.failed.value)
+
+    first = redelivery.register_delivery("job-1", chat_id=5, message_id=7)
+    second = redelivery.register_delivery("job-1", chat_id=5, message_id=7)
+    other = redelivery.register_delivery("job-1", chat_id=6, message_id=8)
+
+    assert first == second
+    assert other != first
+    with session_scope() as s:
+        assert s.query(Delivery).count() == 2
+
+
 def test_pending_picks_only_failed_jobs() -> None:
     # Удачный обычный путь бот уже закрыл сам — джоба succeeded, и досылать
     # нечего. Иначе пользователь получил бы файл дважды.

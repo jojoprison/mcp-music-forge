@@ -24,6 +24,38 @@ _REDELIVERY_CAPTION = (
 )
 
 
+def register_delivery(
+    job_id: str, chat_id: int, message_id: int | None = None
+) -> str:
+    """Запоминает, кому отдать результат джобы.
+
+    🛑 Вызывается ПРЯМО, без HTTP. Первая редакция выставляла это эндпоинтом
+    `POST /deliveries` — и получалась дыра: api слушает `0.0.0.0:8033` без
+    аутентификации, то есть кто угодно мог зарегистрировать доставку на чужой
+    `chat_id` и заставить бота слать файлы чужим людям. Эндпоинт не нужен
+    вовсе: бот поллится ВНУТРИ процесса api и ходил бы по HTTP сам к себе.
+
+    Регистрируем в момент постановки, а не при выдаче: если процесс упадёт
+    между ними — а это ровно тот случай, ради которого досыл и существует, —
+    записывать будет уже некому.
+    """
+    with session_scope() as s:
+        # Повтор той же ссылки тем же сообщением не должен плодить дубли:
+        # файл пришёл бы человеку дважды.
+        existing = (
+            s.query(Delivery)
+            .filter_by(job_id=job_id, chat_id=chat_id, message_id=message_id)
+            .first()
+        )
+        if existing:
+            return existing.id
+
+        row = Delivery(job_id=job_id, chat_id=chat_id, message_id=message_id)
+        s.add(row)
+        s.flush()
+        return row.id
+
+
 def pending_job_ids() -> list[str]:
     """Джобы, которые кто-то ждёт, а они упали.
 
