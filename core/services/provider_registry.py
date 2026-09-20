@@ -4,12 +4,17 @@ from collections.abc import Iterable
 
 from core.ports.provider_port import ProviderPort
 from providers.soundcloud_ytdlp.adapter import SoundCloudYtDlpProvider
+from providers.yandex_music.adapter import YandexMusicProvider
 from providers.youtube.adapter import YouTubeProvider
 
 
 def all_providers() -> list[ProviderPort]:
-    # TODO: register more providers here (Yandex Music, Spotify)
-    return [SoundCloudYtDlpProvider(), YouTubeProvider()]
+    # TODO: register more providers here (Spotify)
+    return [
+        SoundCloudYtDlpProvider(),
+        YouTubeProvider(),
+        YandexMusicProvider(),
+    ]
 
 
 

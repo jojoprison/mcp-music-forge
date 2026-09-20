@@ -44,6 +44,20 @@ class AppSettings(BaseSettings):
         default=None, alias="YOUTUBE_POT_BASE_URL"
     )
 
+    # Токен аккаунта Яндекс.Музыки. Без него API отдаёт download-info с
+    # пометкой preview и 30-секундный файл вместо трека — то есть джоба
+    # завершится успехом, а человек получит огрызок.
+    yandex_music_token: str | None = Field(
+        default=None, alias="YANDEX_MUSIC_TOKEN"
+    )
+
+    # Прокси с российским адресом ДЛЯ API Яндекса (http:// или socks5://).
+    # api.music.yandex.net отвечает 451 зарубежным адресам, а прод живёт в
+    # Сингапуре. Сам файл качается мимо прокси — storage.yandex.net открыт.
+    yandex_music_api_proxy: str | None = Field(
+        default=None, alias="YANDEX_MUSIC_API_PROXY"
+    )
+
     # If true, allow stream downloads even when provider marks not downloadable
     allow_stream_downloads: bool = Field(
         default=True, alias="ALLOW_STREAM_DOWNLOADS"

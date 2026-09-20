@@ -12,6 +12,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import FSInputFile, Message
 
 from core.logging import configure_logging
+from core.services.provider_registry import detect_provider
 from core.services.redelivery import register_delivery
 from core.settings import get_settings
 
@@ -29,9 +30,12 @@ def is_valid_url(text: str) -> bool:
     text = text.strip()
     if not (text.startswith("http://") or text.startswith("https://")):
         return False
-    # Simple check for domains
-    domains = ["soundcloud.com", "youtube.com", "youtu.be", "m.soundcloud.com", "www.youtube.com"]
-    return any(d in text for d in domains)
+    # 🛑 Список хостов здесь не держим: он был копией того, что уже объявлено
+    # в провайдерах, и копия разъезжалась молча. Яндекс приехал с четырьмя
+    # доменами (.ru/.com/.kz/.by), в боте оказался один — ссылку на
+    # music.yandex.com провайдер умеет скачать, а бот отвечал «пришли
+    # валидную ссылку». Спрашиваем тех, кто реально качает.
+    return detect_provider(text) is not None
 
 async def monitor_job(message: Message, job_id: str, api_base: str):
     """Poll API for job status and send file when done."""
@@ -108,20 +112,27 @@ async def monitor_job(message: Message, job_id: str, api_base: str):
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
-    await message.answer(f"Hello, {message.from_user.full_name}! Send me a SoundCloud or YouTube link to download.")
+    await message.answer(
+        f"Hello, {message.from_user.full_name}! Send me a YouTube, "
+        "SoundCloud or Yandex Music link to download."
+    )
 
 @dp.message()
 async def handle_message(message: Message) -> None:
     text = message.text
     
     if not text:
-        await message.answer("Please send a valid YouTube or SoundCloud link.")
+        await message.answer(
+            "Please send a valid YouTube, SoundCloud or Yandex Music link."
+        )
         return
 
     text = text.strip()
     
     if not is_valid_url(text):
-        await message.answer("Please send a valid YouTube or SoundCloud link.")
+        await message.answer(
+            "Please send a valid YouTube, SoundCloud or Yandex Music link."
+        )
         return
 
     # Call API to enqueue
