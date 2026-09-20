@@ -222,3 +222,6 @@ data/jobs/
 
 # --- секреты, кладутся руками на сервер: cookies площадок и прочее ---
 data/secret/
+
+# Claude Code: локальные разрешения сессии, в общий репозиторий не едут
+.claude/settings.local.json
