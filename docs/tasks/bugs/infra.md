@@ -19,7 +19,46 @@
   отказа, и пока он лежит, Яндекс отдаёт терминальный отказ вместо повтора; если это начнёт
   мешать — 3proxy на самом узле либо второй узел про запас.
 - **Чего не хватает для фикса:** публичный ключ `coco` не лежит в `authorized_keys` на
-  `vpn-gateway` (проверено: `Permission denied (publickey)`), `autossh` на `coco` не установлен.
+  `vpn-gateway` (проверено 2026-09-21: `grep -c tg-3-hetzner-prod` → `0`), `autossh` на `coco`
+  не установлен.
+- **Готовые шаги** (выполняет человек — установка ключей и постоянных служб агенту не разрешена):
+
+  ```bash
+  # 1. ключ прода на российский узел
+  ssh coco 'cat ~/.ssh/id_ed25519.pub' | ssh vpn-gateway 'cat >> ~/.ssh/authorized_keys'
+  ssh coco 'ssh -o BatchMode=yes root@111.88.254.249 hostname'   # ждём: vpn-gateway
+
+  # 2. туннель как служба на coco
+  ssh coco 'apt-get update && apt-get install -y autossh'
+  ssh coco 'cat > /etc/systemd/system/yandex-proxy.service' <<'UNIT'
+  [Unit]
+  Description=SOCKS5 в РФ для API Яндекс.Музыки (api.music.yandex.net отдаёт 451 из SG)
+  After=network-online.target
+  Wants=network-online.target
+
+  [Service]
+  # -N без команды, -D локальный SOCKS5; ServerAlive добивает мёртвый туннель,
+  # иначе он висит «живым» и провайдер получает таймауты вместо отказа.
+  ExecStart=/usr/bin/autossh -M 0 -N -D 127.0.0.1:1080 \
+    -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+    -o ExitOnForwardFailure=yes -o StrictHostKeyChecking=accept-new \
+    root@111.88.254.249
+  Restart=always
+  RestartSec=10
+
+  [Install]
+  WantedBy=multi-user.target
+  UNIT
+  ssh coco 'systemctl daemon-reload && systemctl enable --now yandex-proxy'
+
+  # 3. настройки прода (network_mode: host, поэтому 127.0.0.1 виден контейнерам)
+  #    YANDEX_MUSIC_TOKEN берётся из get_yandex_token.py, в репозиторий не попадает
+  ssh coco 'cd /root/mcp-music-forge && echo "YANDEX_MUSIC_API_PROXY=socks5://127.0.0.1:1080" >> .env.prod'
+
+  # 4. пересборка: без неё в образе нет пакета yandex-music
+  ssh coco 'cd /root/mcp-music-forge && git pull && \
+    docker compose -f docker-compose.prod.yml up -d --build api worker'
+  ```
 - **Проверка:** с `coco` изнутри контейнера `worker` — запрос к `api.music.yandex.net` отдаёт
   **200**, а не 451; следом боевая джоба по ссылке на трек кладёт в `final/` файл, чья
   длительность совпадает с заявленной (а не 30 с).
