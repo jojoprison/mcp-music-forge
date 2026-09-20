@@ -58,6 +58,10 @@ async def process_job(job_id: str) -> None:
         if not job:
             return
         job.status = JobStatus.running.value
+        # Джобы дедуплицируются по фингерпринту, поэтому сюда попадает и та,
+        # что уже падала. Её ошибка описывает прошлую попытку, а не эту —
+        # иначе `succeeded` уезжает наружу вместе с текстом отказа.
+        job.error = None
         s.add(job)
         url = job.url
         options = job.options

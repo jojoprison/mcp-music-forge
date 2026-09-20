@@ -51,9 +51,12 @@ class AppSettings(BaseSettings):
         default=None, alias="YANDEX_MUSIC_TOKEN"
     )
 
-    # Прокси с российским адресом ДЛЯ API Яндекса (http:// или socks5://).
+    # Прокси с российским адресом ДЛЯ API Яндекса (http:// или socks5h://).
     # api.music.yandex.net отвечает 451 зарубежным адресам, а прод живёт в
     # Сингапуре. Сам файл качается мимо прокси — storage.yandex.net открыт.
+    # 🛑 Именно socks5h, а не socks5: у api.music.yandex.net локальный резолв
+    # даёт IPv6, которого в ssh-туннеле нет, и соединение рвётся на установке.
+    # socks5h отдаёт имя на ту сторону, где оно резолвится в рабочий адрес.
     yandex_music_api_proxy: str | None = Field(
         default=None, alias="YANDEX_MUSIC_API_PROXY"
     )
