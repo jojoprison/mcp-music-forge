@@ -42,16 +42,13 @@ class _FakeProvider(ProviderPort):
         return str(p), probe
 
 
-@pytest.mark.asyncio
-async def test_process_job_success(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    # Settings
+@pytest.fixture
+def orchestrator_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    """Рабочее окружение оркестратора: провайдер и транскод — заглушки."""
     settings = get_settings()
     settings.storage_dir = tmp_path / "data"
     create_db_and_tables()
 
-    # Patch provider detection
     from core.services import provider_registry
 
     monkeypatch.setattr(
@@ -70,6 +67,12 @@ async def test_process_job_success(
     import transcoder.ffmpeg_cli as ffmpeg_cli
 
     monkeypatch.setattr(ffmpeg_cli, "transcode", fake_transcode)
+    return settings
+
+
+@pytest.mark.asyncio
+async def test_process_job_success(orchestrator_env) -> None:
+    settings = orchestrator_env
 
     # Create job
     with session_scope() as s:
@@ -95,3 +98,36 @@ async def test_process_job_success(
         assert job_dir.exists()
         files = list(job_dir.glob("*"))
         assert files, "No output files created"
+
+
+@pytest.mark.asyncio
+async def test_retry_clears_error_of_previous_attempt(orchestrator_env) -> None:
+    """Джобу переиспользуют по фингерпринту, и её ошибка живёт до конца.
+
+    Замер на проде 2026-09-21: джоба упала на туннеле, после починки прошла —
+    и отдавала `status: succeeded` вместе с текстом «временно не отдала файл».
+    Чистим в точке старта, а не в успехе: иначе то же противоречие показывает
+    `running`, пока джоба идёт.
+    """
+    with session_scope() as s:
+        s.add(
+            Job(
+                id="job2",
+                provider="soundcloud",
+                url="http://example.com/y",
+                fingerprint="fp2",
+                status=JobStatus.failed.value,
+                error="Яндекс.Музыка временно не отдала файл.",
+                options=DownloadOptions().model_dump(),
+            )
+        )
+
+    await process_job("job2")
+
+    with session_scope() as s:
+        job_db = s.get(Job, "job2")
+        assert job_db is not None
+        assert job_db.status == JobStatus.succeeded.value
+        assert job_db.error is None, (
+            f"ошибка прошлой попытки жива: {job_db.error!r}"
+        )
