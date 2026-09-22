@@ -169,9 +169,14 @@ async def _embed_tags_and_cover(
 async def _tag_mp3(
     final_path: Path, opts: DownloadOptions, probe, final_dir: Path
 ) -> None:
-    from mutagen.id3 import APIC, ID3, TIT2, TPE1
+    from mutagen.id3 import APIC, ID3, TIT2, TPE1, ID3NoHeaderError
 
-    tags = ID3(final_path)
+    try:
+        tags = ID3(final_path)
+    except ID3NoHeaderError:
+        # Яндекс отдаёт сырой mp3 без блока тегов (у YouTube его пишет
+        # ffmpeg) — создаём блок с нуля, иначе трек уедет без обложки.
+        tags = ID3()
     if probe.title:
         tags.add(TIT2(encoding=3, text=probe.title))
     if probe.artist:
@@ -190,7 +195,7 @@ async def _tag_mp3(
                     data=cover.read_bytes(),
                 )
             )
-    tags.save(v2_version=3)
+    tags.save(final_path, v2_version=3)
 
 
 async def _tag_flac(

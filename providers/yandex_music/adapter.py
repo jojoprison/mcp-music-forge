@@ -179,7 +179,10 @@ def _artwork_of(track: Any) -> str | None:
     uri = getattr(track, "cover_uri", None)
     if not uri:
         return None
-    return "https://" + str(uri).replace("%%", "400x400")
+    # 1000x1000 — крупнейший размер, который отдаёт раздача (замер
+    # 22.09.2026: ~100 КБ против ~18 КБ у 400x400). Обложка вшивается в файл,
+    # и на 400 в плеере она мыльная, а к шести мегабайтам звука это копейки.
+    return "https://" + str(uri).replace("%%", "1000x1000")
 
 
 def _safe_filename(probe: ProbeResult, codec: str | None) -> str:
