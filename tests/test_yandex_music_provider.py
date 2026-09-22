@@ -110,7 +110,7 @@ async def test_probe_full_track(monkeypatch: pytest.MonkeyPatch) -> None:
     assert res.artist == "Исполнитель"
     assert res.duration == 125
     assert res.artwork_url == (
-        "https://avatars.yandex.net/get-music-content/1/400x400"
+        "https://avatars.yandex.net/get-music-content/1/1000x1000"
     )
     assert res.reason_if_denied is None
 
